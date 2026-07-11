@@ -164,9 +164,33 @@ open in normal situations, STANDOFF carries a modest 0.5 baseline so it's a
 real but rare alternative; in the bad-health case the cap lifts to 2.0 so
 camping runs at parity with SLY.
 
-Recovery overrides the stance machine entirely: off-stage -> jump toward
-centre, then up-B when jumps run out. That behaviour is shared across all
-stances in `AniketBot._recover`.
+### Proactive defence
+
+`behave_defence` **shields by default whenever the opponent can reach it**,
+whether or not they're actively attacking — that's the user-facing "defend
+regardless if attacks are coming your way" rule. The shield is mixed with
+spot-dodges (shield + MAIN down) and rolls (shield + MAIN toward/away) so
+the opponent can't just grab the shield. `movement.defend()` implements the
+mix-up. ATTACK and ROGUE also shield *reactively* when `is_attacking(opp)`
+fires within `THREAT_RANGE` — they won't eat an incoming f-tilt just to land
+their own jab.
+
+`is_attacking(player)` detects physical attacks (jabs, tilts, smashes,
+aerials) via the `Action` enum so the bot can react without waiting to be
+hit. Specials (neutral-B, side-B, up-B) are excluded for simplicity — most
+are reactable and many are projectile-based.
+
+Recovery overrides the stance machine entirely and has two triggers:
+1. **Fully off-stage** (libmelee's `off_stage` flag, or past the blast line
+   and below the floor) -> jump toward centre, then up-B when jumps run out.
+2. **About to fall off the ledge** -> airborne past the safe line but not
+   yet flagged off-stage (knocked or jumped near the ledge and heading out).
+   The same `_recover` action fires pre-emptively so the bot **jumps back to
+   the main arena before it slides off**, rather than waiting until it's
+   fully off-stage. The grounded teeter case is already handled by the
+   movement layer's `near_ ledge` clamp (it never walks off), so the
+   about-to-fall trigger only fires on the airborne case to avoid burning
+   jumps while standing safely at the ledge.
 
 ## Movement (stage-aware navigation)
 

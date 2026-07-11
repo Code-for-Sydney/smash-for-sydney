@@ -24,6 +24,7 @@ here -- it's the override in ``AniketBot._recover`` that fires once
 ``is_off_stage`` is already true. This layer's job is to keep us from
 reaching that state during normal play.
 """
+import random
 from typing import List, Optional, Tuple
 
 import melee
@@ -38,6 +39,9 @@ PLATFORM_Y_TOLERANCE = 5.0 # |dy| to count "standing on" a platform
 JUMP_DRIFT_TOWARD = 0.4    # main-stick offset from 0.5 for air-drift (in [0, 0.5])
 ELEVATED_ABOVE = 8.0       # opp y above me y by this many units => opp is "up there"
 JUMP_APEX_SPEED_Y = 0.0    # me.speed_y_self <= this => at/below the apex (time to double jump)
+THREAT_RANGE = 22.0       # within this, the opponent can reach us with a hit
+SPOTDODGE_PROB = 0.18      # per-frame chance to spot-dodge while defending
+ROLL_PROB = 0.10           # per-frame chance to roll away while shielding
 
 Platform = Tuple[float, float, float, str]   # (height, left_x, right_x, name)
 PlatList = List[Platform]
@@ -197,6 +201,32 @@ def _shield(bot):
     _ctrl(bot).press_button(Button.BUTTON_R)
 
 
+def _spot_dodge(bot):
+    """Spot-dodge: shield + tap down on the MAIN stick (same frame)."""
+    c = _ctrl(bot)
+    c.press_button(Button.BUTTON_R)
+    c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.0)
+
+
+def _roll(bot, onleft, forward=True):
+    """Roll: shield + tilt MAIN stick in a direction.
+
+    ``forward=True`` rolls toward the opponent; ``False`` rolls away.
+    The caller must ensure rolling ``away`` won't carry us off a ledge.
+    """
+    c = _ctrl(bot)
+    c.press_button(Button.BUTTON_R)
+    if forward:
+        c.tilt_analog(Button.BUTTON_MAIN, 1.0 if onleft else 0.0, 0.5)
+    else:
+        c.tilt_analog(Button.BUTTON_MAIN, 0.0 if onleft else 1.0, 0.5)
+
+
+def _air_dodge(bot):
+    """Air-dodge: press R while airborne."""
+    _ctrl(bot).press_button(Button.BUTTON_R)
+
+
 # ---------------------------------------------------------------- escape
 
 def escape_up(bot, me, gamestate) -> bool:
@@ -231,6 +261,38 @@ def escape_up(bot, me, gamestate) -> bool:
 
 
 # ---------------------------------------------------------------- dispatcher
+
+def defend(bot, me, opp, gamestate, onleft, distance) -> None:
+    """Proactive defensive action within the opponent's threat range.
+
+    Shields by default, with spot-dodge and roll mix-ups to avoid grabs and
+    to reposition. Works whether or not the opponent is actively attacking —
+    the point is to put up our guard whenever they can reach us, not just
+    when we happen to see an attack coming. Airborne calls air-dodge.
+    """
+    if not me.on_ground:
+        if distance < THREAT_RANGE * 0.8:
+            _air_dodge(bot)
+        else:
+            # Far enough in the air -- drift away from the opponent.
+            _drift(bot, not onleft, 0.3)
+        return
+
+    # Grounded: shield is the default, dice in spot-dodges and rolls.
+    roll = random.random()
+    if roll < SPOTDODGE_PROB:
+        _spot_dodge(bot)
+        return
+    if roll < SPOTDODGE_PROB + ROLL_PROB:
+        away_dir = -1 if onleft else 1   # away from the opponent
+        if near_ledge(me, gamestate, away_dir):
+            # Rolling away would carry us off -- roll inward instead.
+            _roll(bot, onleft, forward=True)
+        else:
+            _roll(bot, onleft, forward=False)
+        return
+    _shield(bot)
+
 
 def move(bot, me, opp, gamestate, onleft: bool, intent: str) -> None:
     """Write movement inputs for the given intent, with ledge + platform safety.
