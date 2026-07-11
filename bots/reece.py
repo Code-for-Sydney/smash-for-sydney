@@ -63,6 +63,9 @@ class Reece(Bot):
         if self._should_recover(me, left_edge, right_edge, floor_y):
             return "jumping_to_stage"
 
+        if self._should_retreat(me, left_edge, right_edge):
+            return "retreating"
+
         return "moving_to_opponent"
 
     def _run_state(self, me: PlayerState, target: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float, stage_center: Float):
@@ -70,6 +73,8 @@ class Reece(Bot):
             self._perform_smash_attack(me, target)
         elif self._state == "jumping_to_stage":
             self._recover_to_stage(me, left_edge, right_edge, floor_y, stage_center)
+        elif self._state == "retreating":
+            self._retreat_to_center(me, left_edge, right_edge, stage_center)
         else:
             self._move_toward_target(me, target, left_edge, right_edge, floor_y, stage_center)
 
@@ -89,6 +94,12 @@ class Reece(Bot):
             return False
 
         return me.position.x < left_edge - EDGE_MARGIN or me.position.x > right_edge + EDGE_MARGIN
+
+    def _should_retreat(self, me: PlayerState, left_edge: Float, right_edge: Float):
+        if not getattr(me, "on_ground", False):
+            return False
+
+        return me.position.x < left_edge + EDGE_MARGIN or me.position.x > right_edge - EDGE_MARGIN
 
     def _nearest_opponent(self, gamestate: GameState, me: PlayerState) -> PlayerState | None:
         opponents = list[tuple[Float, PlayerState]]()
@@ -169,6 +180,11 @@ class Reece(Bot):
         edge_x = right_edge if me_x >= stage_center else left_edge
         self._move_horizontally(me_x, edge_x)
         self._request_jump()
+
+    def _retreat_to_center(self, me: PlayerState, left_edge: Float, right_edge: Float, stage_center: Float):
+        me_x = me.position.x
+        self._move_horizontally(me_x, stage_center)
+        self._release_jump()
 
     def _perform_smash_attack(self, me: PlayerState, target: PlayerState):
         self._release_jump()
