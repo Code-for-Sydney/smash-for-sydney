@@ -26,14 +26,14 @@ LOGGER = logging.getLogger(__name__)
 
 
 JUMP_HOLD_FRAMES = 10
-ATTACK_DISTANCE = 20.0
+ATTACK_DISTANCE = 15.0
 DOWN_SMASH_DISTANCE = 10.0
-RETREAT_EDGE_MARGIN = 40.0
-RECOVER_EDGE_MARGIN = 0
-CENTRE_STAGE_FRACTION = 0.2
+RETREAT_TRIGGER_DISTANCE = 0.75
+RETREAT_RELEASE_DISTANCE = 0.2
 ATTACK_COOLDOWN_FRAMES = 20
 MOVE_DISTANCE_THRESHOLD = 1.0
 MOVE_INTERP_THRESHOLD = 5.0
+FOLLOW_STAGE_FRACTION_MAX = 0.5
 
 ATTACK_SCRIPT_TEMPLATE = (
     ("neutral",),
@@ -47,7 +47,8 @@ ATTACK_SCRIPT_TEMPLATE = (
 
 type Float = float | np.float32
 
-type Script = tuple[tuple[object, ...], ...]
+type ScriptStep = tuple[object, ...]
+type Script = tuple[ScriptStep, ...]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -55,7 +56,22 @@ class StageGeometry:
     left_edge: float
     right_edge: float
     floor_y: float
-    center_x: float
+
+    @property
+    def center_x(self) -> float:
+        return (self.left_edge + self.right_edge) / 2.0
+
+    @property
+    def width(self) -> float:
+        return self.right_edge - self.left_edge
+    
+    @property
+    def left_width(self) -> float:
+        return self.center_x - self.left_edge
+    
+    @property
+    def right_width(self) -> float:
+        return self.right_edge - self.center_x
 
 
 class ReeceBot(Bot):
@@ -71,6 +87,7 @@ class ReeceBot(Bot):
         self._active_script: Script | None = None
         self._script_index = 0
         self._script_wait_remaining = 0
+        self._stage_geometry: StageGeometry | None = None
 
     def fight(self, gamestate: GameState) -> None:
         if self.controller is None or self.port is None:
@@ -91,6 +108,9 @@ class ReeceBot(Bot):
             return
 
         stage_geometry = self._get_stage_geometry(gamestate)
+        if self._stage_geometry is None or self._stage_geometry != stage_geometry:
+            LOGGER.info(f'Stage geometry: {stage_geometry}')
+        self._stage_geometry = stage_geometry
         previous_state = self._state
         self._state = self._choose_state(me, target, stage_geometry)
         if self._state != previous_state:
@@ -144,7 +164,7 @@ class ReeceBot(Bot):
         if getattr(me, "on_ground", False):
             return False
 
-        return me.position.x < stage_geometry.left_edge - RECOVER_EDGE_MARGIN or me.position.x > stage_geometry.right_edge + RECOVER_EDGE_MARGIN
+        return me.position.x < stage_geometry.left_edge or me.position.x > stage_geometry.right_edge
 
     def _should_retreat(self, me: PlayerState, stage_geometry: StageGeometry):
         if not getattr(me, "on_ground", False):
@@ -153,7 +173,10 @@ class ReeceBot(Bot):
         if self._is_hitstun_or_airborne(me):
             return False
 
-        return me.position.x < stage_geometry.left_edge + RETREAT_EDGE_MARGIN or me.position.x > stage_geometry.right_edge - RETREAT_EDGE_MARGIN
+        threshold_left = stage_geometry.center_x - stage_geometry.left_width * RETREAT_TRIGGER_DISTANCE
+        threshold_right = stage_geometry.center_x + stage_geometry.right_width * RETREAT_TRIGGER_DISTANCE
+
+        return me.position.x <= threshold_left or me.position.x >= threshold_right
 
     def _nearest_opponent(self, gamestate: GameState, me: PlayerState) -> PlayerState | None:
         opponents = list[tuple[Float, PlayerState]]()
@@ -176,18 +199,14 @@ class ReeceBot(Bot):
         left_edge = self._get_numeric_value(gamestate, ["stage_left", "left", "left_bound", "left_boundary", "x_left"])
         right_edge = self._get_numeric_value(gamestate, ["stage_right", "right", "right_bound", "right_boundary", "x_right"])
         floor_y = self._get_numeric_value(gamestate, ["stage_bottom", "bottom", "floor", "y_bottom", "bottom_y"])
-        center_x = self._get_numeric_value(gamestate, ["stage_center", "center_x", "center", "x_center"])
 
         if left_edge is None or right_edge is None:
-            left_edge, right_edge = -50.0, 50.0
-
-        if center_x is None:
-            center_x = (left_edge + right_edge) / 2.0
+            left_edge, right_edge = -100.0, 100.0
 
         if floor_y is None:
             floor_y = 0.0
 
-        return StageGeometry(left_edge=float(left_edge), right_edge=float(right_edge), floor_y=float(floor_y), center_x=float(center_x))
+        return StageGeometry(left_edge=float(left_edge), right_edge=float(right_edge), floor_y=float(floor_y))
 
     def _get_numeric_value(self, source: object, attribute_names: Iterable[str]) -> Float | None:
         for attr in attribute_names:
@@ -204,12 +223,12 @@ class ReeceBot(Bot):
         me_y = me.position.y
 
         if getattr(me, "on_ground", False):
-            self._move_horizontally(me_x, target_x)
+            self._move_within_center_limit(me_x, target_x, stage_geometry)
             self._release_jump()
             return
 
         if stage_geometry.left_edge <= me_x <= stage_geometry.right_edge:
-            self._move_horizontally(me_x, target_x)
+            self._move_within_center_limit(me_x, target_x, stage_geometry)
             self._release_jump()
             return
 
@@ -221,6 +240,14 @@ class ReeceBot(Bot):
         edge_x = stage_geometry.right_edge if target_x >= me_x else stage_geometry.left_edge
         self._move_horizontally(me_x, edge_x)
         self._request_jump()
+
+    def _move_within_center_limit(self, me_x: Float, target_x: Float, stage_geometry: StageGeometry):
+        center_x = stage_geometry.center_x
+        desired_x = target_x
+        min_x = center_x - FOLLOW_STAGE_FRACTION_MAX * stage_geometry.left_width
+        max_x = center_x + FOLLOW_STAGE_FRACTION_MAX * stage_geometry.right_width
+        desired_x = max(min_x, min(max_x, desired_x))
+        self._move_horizontally(me_x, desired_x)
 
     def _recover_to_stage(self, me: PlayerState, stage_geometry: StageGeometry):
         me_x = me.position.x
@@ -251,8 +278,9 @@ class ReeceBot(Bot):
         if self._is_hitstun_or_airborne(me):
             return True
 
-        center_margin = max(RETREAT_EDGE_MARGIN, abs(stage_geometry.right_edge - stage_geometry.left_edge) * CENTRE_STAGE_FRACTION)
-        return abs(me.position.x - stage_geometry.center_x) <= center_margin
+        threshold_left = stage_geometry.center_x - stage_geometry.left_width * RETREAT_RELEASE_DISTANCE
+        threshold_right = stage_geometry.center_x + stage_geometry.right_width * RETREAT_RELEASE_DISTANCE
+        return threshold_left <= me.position.x <= threshold_right
 
     def _is_hitstun_or_airborne(self, me: PlayerState) -> bool:
         if not getattr(me, "on_ground", False):
@@ -286,7 +314,7 @@ class ReeceBot(Bot):
         else:
             tilt_x, tilt_y = 1.0, 0.5
 
-        steps = []
+        steps = list[ScriptStep]()
         for step in ATTACK_SCRIPT_TEMPLATE:
             action = step[0]
             if action == "tilt":
