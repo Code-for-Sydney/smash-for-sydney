@@ -3,15 +3,21 @@ import melee
 from .bot import Bot
 
 
+JUMP_HOLD_FRAMES = 10
+
+
 class Reece(Bot):
 
     def __init__(self, character=None):
         super().__init__(character)
         self._jump_requested = False
+        self._jump_hold_elapsed = 0
 
     def fight(self, gamestate):
         if self.controller is None:
             return
+
+        self._update_jump_hold()
 
         me = gamestate.players.get(self.port)
         if me is None or me.position is None:
@@ -100,15 +106,27 @@ class Reece(Bot):
         else:
             self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.5, 0.5)
 
-    def _request_jump(self):
+    def _update_jump_hold(self) -> None:
+        if self._jump_requested and self._jump_hold_elapsed < JUMP_HOLD_FRAMES:
+            self._jump_hold_elapsed += 1
+            return
+
+        if self._jump_requested and self._jump_hold_elapsed >= JUMP_HOLD_FRAMES:
+            self.controller.release_button(melee.enums.Button.BUTTON_A)
+            self._jump_requested = False
+            self._jump_hold_elapsed = 0
+
+    def _request_jump(self) -> None:
         if not self._jump_requested:
             self.controller.press_button(melee.enums.Button.BUTTON_A)
             self._jump_requested = True
+            self._jump_hold_elapsed = 0
 
-    def _release_jump(self):
-        self.controller.release_button(melee.enums.Button.BUTTON_A)
-        self._jump_requested = False
+    def _release_jump(self) -> None:
+        if self._jump_requested:
+            self.controller.release_button(melee.enums.Button.BUTTON_A)
+            self._jump_requested = False
+            self._jump_hold_elapsed = 0
 
-    def _release_inputs(self):
-        self.controller.release_button(melee.enums.Button.BUTTON_A)
-        self._jump_requested = False
+    def _release_inputs(self) -> None:
+        self._release_jump()
