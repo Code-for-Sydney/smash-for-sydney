@@ -1,4 +1,6 @@
 from collections.abc import Iterable
+import logging
+from dataclasses import dataclass
 
 import melee
 from melee import GameState, Character, PlayerState
@@ -6,6 +8,9 @@ from melee import GameState, Character, PlayerState
 import numpy as np
 
 from .bot import Bot
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 # Ideas:
@@ -45,6 +50,14 @@ type Float = float | np.float32
 type Script = tuple[tuple[object, ...], ...]
 
 
+@dataclass(frozen=True, kw_only=True)
+class StageGeometry:
+    left_edge: float
+    right_edge: float
+    floor_y: float
+    center_x: float
+
+
 class ReeceBot(Bot):
 
     def __init__(self, character: Character | None=None) -> None:
@@ -77,44 +90,45 @@ class ReeceBot(Bot):
             self._release_inputs()
             return
 
-        left_edge, right_edge, floor_y, stage_center = self._get_stage_geometry(gamestate)
+        stage_geometry = self._get_stage_geometry(gamestate)
         previous_state = self._state
-        self._state = self._choose_state(me, target, left_edge, right_edge, floor_y)
+        self._state = self._choose_state(me, target, stage_geometry)
         if self._state != previous_state:
+            LOGGER.info(f'State change: {previous_state} -> {self._state}')
             self._cancel_script()
-        self._run_state(me, target, left_edge, right_edge, floor_y, stage_center)
+        self._run_state(me, target, stage_geometry)
 
-    def _choose_state(self, me: PlayerState, target: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float):
+    def _choose_state(self, me: PlayerState, target: PlayerState, stage_geometry: StageGeometry):
         if self._active_script is not None:
             return "attacking"
 
         if self._attack_cooldown_remaining > 0:
             return "moving_to_opponent"
 
-        stage_center = (left_edge + right_edge) / 2.0
-        if self._state == "retreating" and not self._should_stop_retreat(me, left_edge, right_edge, stage_center):
+        stage_center = (stage_geometry.left_edge + stage_geometry.right_edge) / 2.0
+        if self._state == "retreating" and not self._should_stop_retreat(me, stage_geometry):
             return "retreating"
 
-        if self._should_attack(me, target, left_edge, right_edge):
+        if self._should_attack(me, target, stage_geometry.left_edge, stage_geometry.right_edge):
             return "attacking"
 
-        if self._should_recover(me, left_edge, right_edge, floor_y):
+        if self._should_recover(me, stage_geometry.left_edge, stage_geometry.right_edge, stage_geometry.floor_y):
             return "jumping_to_stage"
 
-        if self._should_retreat(me, left_edge, right_edge, stage_center):
+        if self._should_retreat(me, stage_geometry.left_edge, stage_geometry.right_edge, stage_center):
             return "retreating"
 
         return "moving_to_opponent"
 
-    def _run_state(self, me: PlayerState, target: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float, stage_center: Float):
+    def _run_state(self, me: PlayerState, target: PlayerState, stage_geometry: StageGeometry):
         if self._state == "attacking":
             self._perform_smash_attack(me, target)
         elif self._state == "jumping_to_stage":
-            self._recover_to_stage(me, left_edge, right_edge, floor_y, stage_center)
+            self._recover_to_stage(me, stage_geometry)
         elif self._state == "retreating":
-            self._retreat_to_center(me, left_edge, right_edge, stage_center)
+            self._retreat_to_center(me, stage_geometry)
         else:
-            self._move_toward_target(me, target, left_edge, right_edge, floor_y, stage_center)
+            self._move_toward_target(me, target, stage_geometry)
 
     def _should_attack(self, me: PlayerState, target: PlayerState, left_edge: Float, right_edge: Float):
         if not getattr(me, "on_ground", False):
@@ -159,7 +173,7 @@ class ReeceBot(Bot):
         opponents.sort(key=lambda item: item[0])
         return opponents[0][1]
 
-    def _get_stage_geometry(self, gamestate: GameState):
+    def _get_stage_geometry(self, gamestate: GameState) -> StageGeometry:
         left_edge = self._get_numeric_value(gamestate, ["stage_left", "left", "left_bound", "left_boundary", "x_left"])
         right_edge = self._get_numeric_value(gamestate, ["stage_right", "right", "right_bound", "right_boundary", "x_right"])
         floor_y = self._get_numeric_value(gamestate, ["stage_bottom", "bottom", "floor", "y_bottom", "bottom_y"])
@@ -174,7 +188,7 @@ class ReeceBot(Bot):
         if floor_y is None:
             floor_y = 0.0
 
-        return left_edge, right_edge, floor_y, center_x
+        return StageGeometry(left_edge=float(left_edge), right_edge=float(right_edge), floor_y=float(floor_y), center_x=float(center_x))
 
     def _get_numeric_value(self, source: object, attribute_names: Iterable[str]) -> Float | None:
         for attr in attribute_names:
@@ -185,7 +199,7 @@ class ReeceBot(Bot):
                 return float(value)
         return None
 
-    def _move_toward_target(self, me: PlayerState, target: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float, stage_center: Float):
+    def _move_toward_target(self, me: PlayerState, target: PlayerState, stage_geometry: StageGeometry):
         me_x = me.position.x
         target_x = target.position.x
         me_y = me.position.y
@@ -195,51 +209,51 @@ class ReeceBot(Bot):
             self._release_jump()
             return
 
-        if left_edge <= me_x <= right_edge:
+        if stage_geometry.left_edge <= me_x <= stage_geometry.right_edge:
             self._move_horizontally(me_x, target_x)
             self._release_jump()
             return
 
-        if me_y > floor_y:
-            self._move_horizontally(me_x, stage_center)
+        if me_y > stage_geometry.floor_y:
+            self._move_horizontally(me_x, stage_geometry.center_x)
             self._request_jump()
             return
 
-        edge_x = right_edge if target_x >= me_x else left_edge
+        edge_x = stage_geometry.right_edge if target_x >= me_x else stage_geometry.left_edge
         self._move_horizontally(me_x, edge_x)
         self._request_jump()
 
-    def _recover_to_stage(self, me: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float, stage_center: Float):
+    def _recover_to_stage(self, me: PlayerState, stage_geometry: StageGeometry):
         me_x = me.position.x
         me_y = me.position.y
 
-        if me_y > floor_y:
-            self._move_horizontally(me_x, stage_center)
+        if me_y > stage_geometry.floor_y:
+            self._move_horizontally(me_x, stage_geometry.center_x)
             self._request_jump()
             return
 
-        edge_x = right_edge if me_x >= stage_center else left_edge
+        edge_x = stage_geometry.right_edge if me_x >= stage_geometry.center_x else stage_geometry.left_edge
         self._move_horizontally(me_x, edge_x)
         self._request_jump()
 
-    def _retreat_to_center(self, me: PlayerState, left_edge: Float, right_edge: Float, stage_center: Float):
-        if self._should_stop_retreat(me, left_edge, right_edge, stage_center):
+    def _retreat_to_center(self, me: PlayerState, stage_geometry: StageGeometry):
+        if self._should_stop_retreat(me, stage_geometry):
             self._release_jump()
             return
 
         me_x = me.position.x
-        self._move_horizontally(me_x, stage_center)
+        self._move_horizontally(me_x, stage_geometry.center_x)
         self._release_jump()
 
-    def _should_stop_retreat(self, me: PlayerState, left_edge: Float, right_edge: Float, stage_center: Float) -> bool:
+    def _should_stop_retreat(self, me: PlayerState, stage_geometry: StageGeometry) -> bool:
         if not getattr(me, "on_ground", False):
             return True
 
         if self._is_hitstun_or_airborne(me):
             return True
 
-        center_margin = max(RETREAT_EDGE_MARGIN, abs(right_edge - left_edge) * CENTRE_STAGE_FRACTION)
-        return abs(me.position.x - stage_center) <= center_margin
+        center_margin = max(RETREAT_EDGE_MARGIN, abs(stage_geometry.right_edge - stage_geometry.left_edge) * CENTRE_STAGE_FRACTION)
+        return abs(me.position.x - stage_geometry.center_x) <= center_margin
 
     def _is_hitstun_or_airborne(self, me: PlayerState) -> bool:
         if not getattr(me, "on_ground", False):
