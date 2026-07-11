@@ -8,6 +8,14 @@ import numpy as np
 from .bot import Bot
 
 
+# Ideas:
+# - Release tilt stick for 1 frame before attacking.
+# - Retreat should continue until near the centre of the stage, or state changes to in the air (e.g. got hit)
+# - Detect if opponent is standing still and do a more precise action (e.g. attack up or jump and attack).
+# - Weighted average for opponent position to make it smoother
+# - If in hitstun, hold direction away from opponent (DI). Also wiggle tilt stick a bit for SDI.
+
+
 JUMP_HOLD_FRAMES = 10
 ATTACK_DISTANCE = 20.0
 DOWN_SMASH_DISTANCE = 10.0
