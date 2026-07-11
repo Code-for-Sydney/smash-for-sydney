@@ -9,11 +9,11 @@ from .bot import Bot
 
 
 # Ideas:
-# - Release tilt stick for 1 frame before attacking.
 # - Retreat should continue until near the centre of the stage, or state changes to in the air (e.g. got hit)
 # - Detect if opponent is standing still and do a more precise action (e.g. attack up or jump and attack).
 # - Weighted average for opponent position to make it smoother
 # - If in hitstun, hold direction away from opponent (DI). Also wiggle tilt stick a bit for SDI.
+# - Project opponent's position based on their velocity to predict where they will be in the next few frames, for attacking.
 
 
 JUMP_HOLD_FRAMES = 10
