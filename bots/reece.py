@@ -9,17 +9,22 @@ from .bot import Bot
 
 
 # Ideas:
-# - Retreat should continue until near the centre of the stage, or state changes to in the air (e.g. got hit)
+# - On ledge, pick randomly between get up, jump, and roll
 # - Detect if opponent is standing still and do a more precise action (e.g. attack up or jump and attack).
 # - Weighted average for opponent position to make it smoother
 # - If in hitstun, hold direction away from opponent (DI). Also wiggle tilt stick a bit for SDI.
 # - Project opponent's position based on their velocity to predict where they will be in the next few frames, for attacking.
 
 
+# FIXME: doesn't jump when off stage
+
+
 JUMP_HOLD_FRAMES = 10
 ATTACK_DISTANCE = 25.0
 DOWN_SMASH_DISTANCE = 15.0
-EDGE_MARGIN = 40.0
+RETREAT_EDGE_MARGIN = 40.0
+RECOVER_EDGE_MARGIN = 1
+CENTRE_STAGE_FRACTION = 0.2
 ATTACK_COOLDOWN_FRAMES = 20
 
 ATTACK_SCRIPT_TEMPLATE = (
@@ -34,16 +39,20 @@ ATTACK_SCRIPT_TEMPLATE = (
 
 type Float = float | np.float32
 
+type Script = tuple[tuple[object, ...], ...]
+
 
 class ReeceBot(Bot):
 
     def __init__(self, character: Character | None=None) -> None:
+        if character is None:
+            character = Character.GANONDORF
         super().__init__(character)
         self._jump_requested = False
         self._jump_hold_elapsed = 0
         self._state = "moving_to_opponent"
         self._attack_cooldown_remaining = 0
-        self._active_script: tuple[tuple[object, ...], ...] | None = None
+        self._active_script: Script | None = None
         self._script_index = 0
         self._script_wait_remaining = 0
 
@@ -108,8 +117,8 @@ class ReeceBot(Bot):
         if not getattr(me, "on_ground", False):
             return False
 
-        if not (left_edge + EDGE_MARGIN <= me.position.x <= right_edge - EDGE_MARGIN):
-            return False
+        # if not (left_edge + EDGE_MARGIN <= me.position.x <= right_edge - EDGE_MARGIN):
+        #     return False
 
         horizontal_distance = abs(target.position.x - me.position.x)
         vertical_distance = abs(target.position.y - me.position.y)
@@ -119,7 +128,7 @@ class ReeceBot(Bot):
         if getattr(me, "on_ground", False):
             return False
 
-        return me.position.x < left_edge - EDGE_MARGIN or me.position.x > right_edge + EDGE_MARGIN
+        return me.position.x < left_edge - RECOVER_EDGE_MARGIN or me.position.x > right_edge + RECOVER_EDGE_MARGIN
 
     def _should_retreat(self, me: PlayerState, left_edge: Float, right_edge: Float, stage_center: Float):
         if not getattr(me, "on_ground", False):
@@ -128,7 +137,7 @@ class ReeceBot(Bot):
         if self._is_hitstun_or_airborne(me):
             return False
 
-        return me.position.x < left_edge + EDGE_MARGIN or me.position.x > right_edge - EDGE_MARGIN
+        return me.position.x < left_edge + RETREAT_EDGE_MARGIN or me.position.x > right_edge - RETREAT_EDGE_MARGIN
 
     def _nearest_opponent(self, gamestate: GameState, me: PlayerState) -> PlayerState | None:
         opponents = list[tuple[Float, PlayerState]]()
@@ -226,7 +235,7 @@ class ReeceBot(Bot):
         if self._is_hitstun_or_airborne(me):
             return True
 
-        center_margin = max(EDGE_MARGIN, abs(right_edge - left_edge) * 0.1)
+        center_margin = max(RETREAT_EDGE_MARGIN, abs(right_edge - left_edge) * CENTRE_STAGE_FRACTION)
         return abs(me.position.x - stage_center) <= center_margin
 
     def _is_hitstun_or_airborne(self, me: PlayerState) -> bool:
@@ -250,7 +259,7 @@ class ReeceBot(Bot):
 
         self._attack_cooldown_remaining = ATTACK_COOLDOWN_FRAMES
 
-    def _build_attack_script(self, me: PlayerState, target: PlayerState):
+    def _build_attack_script(self, me: PlayerState, target: PlayerState) -> Script:
         horizontal_distance = abs(target.position.x - me.position.x)
         vertical_distance = abs(target.position.y - me.position.y)
 
@@ -270,7 +279,7 @@ class ReeceBot(Bot):
                 steps.append(step)
         return tuple(steps)
 
-    def _queue_script(self, script):
+    def _queue_script(self, script: Script | None) -> None:
         self._cancel_script()
         if script is None:
             return
