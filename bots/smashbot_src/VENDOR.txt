@@ -1,0 +1,2 @@
+Vendored altf4/smashbot (commit 67c4120) on 2024-05-15
+Source: https://github.com/altf4/smashbot
