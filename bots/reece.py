@@ -203,7 +203,7 @@ class Reece(Bot):
         vertical_distance = abs(target.position.y - me.position.y)
 
         if self._attack_frames_remaining <= 0:
-            self._attack_frames_remaining = ATTACK_DURATION_FRAMES + 1
+            self._attack_frames_remaining = ATTACK_DURATION_FRAMES + 2
             if horizontal_distance <= DOWN_SMASH_DISTANCE and vertical_distance <= DOWN_SMASH_DISTANCE:
                 self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.5, 0.0)
             elif target.position.x < me.position.x:
@@ -213,6 +213,10 @@ class Reece(Bot):
             return
 
         self._attack_frames_remaining -= 1
+        if self._attack_frames_remaining == ATTACK_DURATION_FRAMES + 1:
+            self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.5, 0.5)
+            return
+
         if self._attack_frames_remaining == ATTACK_DURATION_FRAMES:
             self.controller.press_button(melee.enums.Button.BUTTON_A)
             return
