@@ -61,6 +61,7 @@ import melee
 from melee.enums import Button, Menu
 
 from bots.bot import Bot
+from . import movement
 from .roster import pick_roster, first_slot_away_from, spec_names_for
 from .stances import Stance, behave, is_off_stage, select_stance
 
@@ -266,8 +267,10 @@ class AniketBot(Bot):
         # safe and prevents leaked button presses across stance switches.
         self.controller.release_all()
 
-        # Recovery override.
-        if self._needs_recovery(me):
+        # Recovery override -- also fires pre-emptively when we're about to
+        # fall off the ledge (airborne past the safe line but not yet fully
+        # off-stage), so we jump back to the main arena instead of sliding off.
+        if self._needs_recovery(me, gamestate):
             self._recover(me)
             return
 
@@ -297,9 +300,28 @@ class AniketBot(Bot):
     # ----------------------------------------------------------- recovery only
 
     @staticmethod
-    def _needs_recovery(me):
-        """True if we are off-stage and below the platform line (roughly)."""
-        return is_off_stage(me)
+    def _needs_recovery(me, gamestate):
+        """True if we are off-stage OR about to fall off the ledge.
+
+        Two cases:
+          1. Fully off-stage (libmelee's ``off_stage`` flag, or past the blast
+             line and below the floor). The classic recovery case.
+          2. *About to fall off*: airborne past the safe line but not yet
+             flagged off-stage -- knocked or jumped near the ledge and heading
+             out. Catching this frame window is what makes the bot jump back
+             to the main arena *before* it's actually off-stage.
+
+        The grounded teeter case is already handled by the movement layer's
+        ``near_ledge`` clamp (it never walks off), so we only fire on the
+        airborne case here to avoid burning jumps while standing safely at the
+        ledge.
+        """
+        if is_off_stage(me):
+            return True
+        if me.on_ground:
+            return False
+        left_safe, right_safe = movement.stage_bounds(gamestate)
+        return me.position.x <= left_safe or me.position.x >= right_safe
 
     def _recover(self, me):
         """Burn jumps toward centre, then up-B. Shared by all stances.
