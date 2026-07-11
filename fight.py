@@ -45,11 +45,14 @@ def fight(stage, players):
 
     menu_helper = melee.MenuHelper()
 
+    game_rounds = 3
+    in_menu = False
     while True:
 
         gamestate = console.step()
    
         if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+            in_menu = False
             for player in players:
                 player.fight(gamestate)
         else:
@@ -67,3 +70,9 @@ def fight(stage, players):
                 "",
                 autostart=True,
                 swag=False)
+            if not in_menu:
+                in_menu = True
+                print("ROUND", game_rounds)
+                game_rounds -= 1
+                if game_rounds < 0:
+                    exit()
