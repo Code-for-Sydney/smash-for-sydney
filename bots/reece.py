@@ -1,5 +1,9 @@
+from collections.abc import Iterable
+
 import melee
-from melee import GameState
+from melee import GameState, Character, PlayerState
+
+import numpy as np
 
 from .bot import Bot
 
@@ -11,9 +15,12 @@ ATTACK_DURATION_FRAMES = 3
 ATTACK_COOLDOWN_FRAMES = 12
 
 
+type Float = float | np.float32
+
+
 class Reece(Bot):
 
-    def __init__(self, character=None):
+    def __init__(self, character: Character | None=None) -> None:
         super().__init__(character)
         self._jump_requested = False
         self._jump_hold_elapsed = 0
@@ -22,14 +29,14 @@ class Reece(Bot):
         self._attack_cooldown_remaining = 0
 
     def fight(self, gamestate: GameState) -> None:
-        if self.controller is None:
+        if self.controller is None or self.port is None:
             return
 
         self._update_jump_hold()
         self._update_attack_timers()
 
         me = gamestate.players.get(self.port)
-        if me is None or me.position is None:
+        if me is None:
             return
 
         target = self._nearest_opponent(gamestate, me)
@@ -42,7 +49,7 @@ class Reece(Bot):
         self._state = self._choose_state(me, target, left_edge, right_edge, floor_y)
         self._run_state(me, target, left_edge, right_edge, floor_y, stage_center)
 
-    def _choose_state(self, me, target, left_edge, right_edge, floor_y):
+    def _choose_state(self, me: PlayerState, target: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float):
         if self._attack_frames_remaining > 0:
             return "attacking"
 
@@ -57,7 +64,7 @@ class Reece(Bot):
 
         return "moving_to_opponent"
 
-    def _run_state(self, me, target, left_edge, right_edge, floor_y, stage_center):
+    def _run_state(self, me: PlayerState, target: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float, stage_center: Float):
         if self._state == "attacking":
             self._perform_smash_attack(me, target)
         elif self._state == "jumping_to_stage":
@@ -65,7 +72,7 @@ class Reece(Bot):
         else:
             self._move_toward_target(me, target, left_edge, right_edge, floor_y, stage_center)
 
-    def _should_attack(self, me, target, left_edge, right_edge):
+    def _should_attack(self, me: PlayerState, target: PlayerState, left_edge: Float, right_edge: Float):
         if not getattr(me, "on_ground", False):
             return False
 
@@ -75,16 +82,16 @@ class Reece(Bot):
         horizontal_distance = abs(target.position.x - me.position.x)
         return horizontal_distance <= ATTACK_DISTANCE
 
-    def _should_recover(self, me, left_edge, right_edge, floor_y):
+    def _should_recover(self, me: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float):
         if getattr(me, "on_ground", False):
             return False
 
         return me.position.x < left_edge - EDGE_MARGIN or me.position.x > right_edge + EDGE_MARGIN
 
-    def _nearest_opponent(self, gamestate: GameState, me):
-        opponents = []
+    def _nearest_opponent(self, gamestate: GameState, me: PlayerState) -> PlayerState | None:
+        opponents = list[tuple[Float, PlayerState]]()
         for port, player in gamestate.players.items():
-            if port == self.port or player.position is None:
+            if port == self.port:
                 continue
 
             dx = player.position.x - me.position.x
@@ -115,7 +122,7 @@ class Reece(Bot):
 
         return left_edge, right_edge, floor_y, center_x
 
-    def _get_numeric_value(self, source, attribute_names):
+    def _get_numeric_value(self, source: object, attribute_names: Iterable[str]) -> Float | None:
         for attr in attribute_names:
             value = getattr(source, attr, None)
             if value is None and source is not None:
@@ -124,7 +131,7 @@ class Reece(Bot):
                 return float(value)
         return None
 
-    def _move_toward_target(self, me, target, left_edge, right_edge, floor_y, stage_center):
+    def _move_toward_target(self, me: PlayerState, target: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float, stage_center: Float):
         me_x = me.position.x
         target_x = target.position.x
         me_y = me.position.y
@@ -148,7 +155,7 @@ class Reece(Bot):
         self._move_horizontally(me_x, edge_x)
         self._request_jump()
 
-    def _recover_to_stage(self, me, left_edge, right_edge, floor_y, stage_center):
+    def _recover_to_stage(self, me: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float, stage_center: Float):
         me_x = me.position.x
         me_y = me.position.y
 
@@ -161,8 +168,10 @@ class Reece(Bot):
         self._move_horizontally(me_x, edge_x)
         self._request_jump()
 
-    def _perform_smash_attack(self, me, target):
+    def _perform_smash_attack(self, me: PlayerState, target: PlayerState):
         self._release_jump()
+
+        assert self.controller is not None
 
         if target.position.x < me.position.x:
             self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.0, 0.5)
@@ -180,7 +189,8 @@ class Reece(Bot):
             self._attack_frames_remaining = 0
             self._attack_cooldown_remaining = ATTACK_COOLDOWN_FRAMES
 
-    def _move_horizontally(self, me_x, target_x):
+    def _move_horizontally(self, me_x: Float, target_x: Float):
+        assert self.controller is not None
         if target_x < me_x:
             self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.0, 0.5)
         elif target_x > me_x:
@@ -194,6 +204,7 @@ class Reece(Bot):
             return
 
         if self._jump_requested and self._jump_hold_elapsed >= JUMP_HOLD_FRAMES:
+            assert self.controller is not None
             self.controller.release_button(melee.enums.Button.BUTTON_A)
             self._jump_requested = False
             self._jump_hold_elapsed = 0
@@ -204,16 +215,19 @@ class Reece(Bot):
 
     def _request_jump(self) -> None:
         if not self._jump_requested:
+            assert self.controller is not None
             self.controller.press_button(melee.enums.Button.BUTTON_A)
             self._jump_requested = True
             self._jump_hold_elapsed = 0
 
     def _release_jump(self) -> None:
         if self._jump_requested:
+            assert self.controller is not None
             self.controller.release_button(melee.enums.Button.BUTTON_A)
             self._jump_requested = False
             self._jump_hold_elapsed = 0
 
     def _release_inputs(self) -> None:
         self._release_jump()
+        assert self.controller is not None
         self.controller.release_button(melee.enums.Button.BUTTON_A)

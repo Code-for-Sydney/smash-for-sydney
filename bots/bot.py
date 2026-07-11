@@ -1,21 +1,23 @@
+from abc import ABC, abstractmethod
+
 import melee
-from melee import GameState
+from melee import Character, GameState, Controller, Console
 
 import logging
 
-class Bot(object):
+class Bot(ABC):
 
-    def __init__(self, character=None):
+    def __init__(self, character: Character | None=None) -> None:
         if not character:
             character = melee.Character.MARIO
         self.character = character
-        self.console = None
-        self.port = None
-        self.controller = None
+        self.console: Console | None = None
+        self.port: int | None = None
+        self.controller: Controller | None = None
 
         logging.info(f"Created character {self.character}")
 
-    def create_controller(self, console, port):
+    def create_controller(self, console: Console, port: int):
         self.console = console
         self.port = port
         self.controller = melee.Controller(console=self.console, port=self.port)
@@ -26,5 +28,6 @@ class Bot(object):
         else:
             logging.info(f"Connected controller {self.port}")
 
+    @abstractmethod
     def fight(self, gamestate: GameState):    
-       pass
+       ...
