@@ -6,3 +6,4 @@ env.sh
 env.ps1
 env.cmd
 *.iso
+.env
