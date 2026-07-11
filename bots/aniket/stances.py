@@ -161,6 +161,25 @@ def in_punish_state(player) -> bool:
     )
 
 
+# All grounded / aerial physical attacks. Specials (neutral-B, side-B, up-B)
+# are excluded for simplicity — most are reactable and projectile-based.
+_ATTACK_ACTIONS = frozenset({
+    Action.NEUTRAL_ATTACK_1, Action.NEUTRAL_ATTACK_2, Action.NEUTRAL_ATTACK_3,
+    Action.LOOPING_ATTACK_START, Action.LOOPING_ATTACK_MIDDLE, Action.LOOPING_ATTACK_END,
+    Action.DASH_ATTACK,
+    Action.FTILT_HIGH, Action.FTILT_HIGH_MID, Action.FTILT_MID, Action.FTILT_LOW_MID, Action.FTILT_LOW,
+    Action.UPTILT, Action.DOWNTILT,
+    Action.FSMASH_HIGH, Action.FSMASH_MID_HIGH, Action.FSMASH_MID, Action.FSMASH_MID_LOW, Action.FSMASH_LOW,
+    Action.UPSMASH, Action.DOWNSMASH,
+    Action.NAIR, Action.FAIR, Action.BAIR, Action.UAIR, Action.DAIR,
+})
+
+
+def is_attacking(player) -> bool:
+    """True if the opponent is in an active physical-attack animation."""
+    return player.action in _ATTACK_ACTIONS
+
+
 def is_off_stage(player) -> bool:
     return bool(getattr(player, "off_stage", False)) or (
         not player.on_ground and player.position.y < -5 and abs(player.position.x) > STAGE_HALF_WIDTH - 10
@@ -332,7 +351,11 @@ def _away(onleft: bool) -> float:
 # ---- Behaviours ----------------------------------------------------------
 
 def behave_attack(bot, me, opp, gamestate, onleft, distance):
-    """Rushdown: move toward the opponent (chasing to platforms) and hit."""
+    """Rushdown: move toward the opponent (chasing to platforms) and hit.
+
+    Still defends reactively — if the opponent is in an active attack
+    animation and we're in their range, we shield instead of eating the hit.
+    """
     c = _ctrl(bot)
     if distance > APPROACH_RANGE:
         # Far -> chase (will jump if the opponent is on a platform above us).
@@ -354,6 +377,12 @@ def behave_attack(bot, me, opp, gamestate, onleft, distance):
         c.release_button(Button.BUTTON_A)
         return
     # In striking range.
+    # Reactive defence: the opponent is throwing a hitbox and we're close
+    # enough to get clipped -- shield rather than trade.
+    if is_attacking(opp) and distance < mv.THREAT_RANGE:
+        mv.move(bot, me, opp, gamestate, onleft, "hold")
+        c.press_button(Button.BUTTON_R)
+        return
     if is_shielding(opp):
         mv.move(bot, me, opp, gamestate, onleft, "hold")
         c.press_button(Button.BUTTON_Z)   # grab the shield
@@ -371,21 +400,27 @@ def behave_attack(bot, me, opp, gamestate, onleft, distance):
 
 
 def behave_defence(bot, me, opp, gamestate, onleft, distance):
-    """Hold spacing; poke approaches; retreat (or escape up) to reset."""
+    """Proactive defence: shield within the threat range *whether or not the
+    opponent is attacking*, poke from outside it, and punish whiffs.
+
+    This is the stance's defining feature — it puts up its guard by default
+    whenever the opponent can reach it, not just when it detects an incoming
+    hit. Spot-dodges and rolls mix in to avoid grabs that would catch the
+    shield. Outside the threat range it pokes with f-tilt and holds spacing."""
     c = _ctrl(bot)
     # Punish window: opponent is in hitlag/landing -> step in and smash.
     if in_punish_state(opp) and distance < SPACING_RANGE * 1.5:
         mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
         c.tilt_analog(Button.BUTTON_C, _toward(onleft), 0.5)
         return
-    # In close -> retreat + shield, reset spacing. If cornered, escape_up fires
-    # (jump to a platform) so we don't walk off the stage.
-    if distance < SPACING_RANGE * 0.6:
-        mv.move(bot, me, opp, gamestate, onleft, "retreat")
-        c.press_button(Button.BUTTON_R)
+    # Within the threat range -> defend proactively (shield / spot-dodge / roll).
+    # This is "regardless if attacks are coming your way" — we guard by default
+    # whenever the opponent can hit us, whether or not we see an attack.
+    if distance < mv.THREAT_RANGE:
+        mv.defend(bot, me, opp, gamestate, onleft, distance)
         return
-    # At spacing radius -> f-tilt as the approach comes in (walk + A).
-    if distance <= SPACING_RANGE:
+    # At poke range -> f-tilt (walk + A) as a safe spacing tool.
+    if distance <= SPACING_RANGE * 1.3:
         mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
         c.press_button(Button.BUTTON_A)
         return
@@ -447,6 +482,11 @@ def behave_rogue(bot, me, opp, gamestate, onleft, distance):
     toward_dir = 1 if onleft else -1
     # In range -> grab or cross-up.
     if distance <= ATTACK_RANGE * 1.2:
+        # Reactive defence: shield incoming attacks even while rushing.
+        if is_attacking(opp) and distance < mv.THREAT_RANGE:
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.press_button(Button.BUTTON_R)
+            return
         if is_shielding(opp) or random.random() < 0.4:
             mv.move(bot, me, opp, gamestate, onleft, "hold")
             c.press_button(Button.BUTTON_Z)
