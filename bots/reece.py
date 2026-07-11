@@ -12,7 +12,7 @@ JUMP_HOLD_FRAMES = 10
 ATTACK_DISTANCE = 20.0
 DOWN_SMASH_DISTANCE = 10.0
 EDGE_MARGIN = 20.0
-ATTACK_DURATION_FRAMES = 5
+ATTACK_DURATION_FRAMES = 3
 ATTACK_COOLDOWN_FRAMES = 20
 
 
@@ -194,18 +194,20 @@ class Reece(Bot):
         horizontal_distance = abs(target.position.x - me.position.x)
         vertical_distance = abs(target.position.y - me.position.y)
 
-        if horizontal_distance <= DOWN_SMASH_DISTANCE and vertical_distance <= DOWN_SMASH_DISTANCE:
-            self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.5, 0.0)
-        elif target.position.x < me.position.x:
-            self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.0, 0.5)
-        else:
-            self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 1.0, 0.5)
-
         if self._attack_frames_remaining <= 0:
-            self._attack_frames_remaining = ATTACK_DURATION_FRAMES
+            self._attack_frames_remaining = ATTACK_DURATION_FRAMES + 1
+            if horizontal_distance <= DOWN_SMASH_DISTANCE and vertical_distance <= DOWN_SMASH_DISTANCE:
+                self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.5, 0.0)
+            elif target.position.x < me.position.x:
+                self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.0, 0.5)
+            else:
+                self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 1.0, 0.5)
+            return
+
+        self._attack_frames_remaining -= 1
+        if self._attack_frames_remaining == ATTACK_DURATION_FRAMES:
             self.controller.press_button(melee.enums.Button.BUTTON_A)
-        else:
-            self._attack_frames_remaining -= 1
+            return
 
         if self._attack_frames_remaining <= 0:
             self.controller.release_button(melee.enums.Button.BUTTON_A)
