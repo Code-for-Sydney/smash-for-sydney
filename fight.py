@@ -54,6 +54,11 @@ def fight(stage, players):
                 player.fight(gamestate)
         else:
             for player in players:
+                # Give each bot one chance per menu frame to update
+                # ``self.character`` before ``menu_helper_simple`` consumes
+                # it. The base ``Bot.menu`` is a no-op, so bots that do not
+                # override it are unaffected.
+                player.menu(gamestate)
                 menu_helper.menu_helper_simple(
                 gamestate,
                 player.controller,

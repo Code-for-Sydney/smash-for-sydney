@@ -3,6 +3,7 @@ import melee
 from fight import fight
 from bots.example import Example
 from bots.masher import Masher
+from bots.aniket import AniketBot
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
