@@ -45,15 +45,23 @@ def fight(stage, players):
 
     menu_helper = melee.MenuHelper()
 
+    game_rounds = 3
+    in_menu = False
     while True:
 
         gamestate = console.step()
    
         if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+            in_menu = False
             for player in players:
                 player.fight(gamestate)
         else:
             for player in players:
+                # Give each bot one chance per menu frame to update
+                # ``self.character`` before ``menu_helper_simple`` consumes
+                # it. The base ``Bot.menu`` is a no-op, so bots that do not
+                # override it are unaffected.
+                player.menu(gamestate)
                 menu_helper.menu_helper_simple(
                 gamestate,
                 player.controller,
@@ -62,3 +70,9 @@ def fight(stage, players):
                 "",
                 autostart=True,
                 swag=False)
+            if not in_menu:
+                in_menu = True
+                print("ROUND", game_rounds)
+                game_rounds -= 1
+                if game_rounds < 0:
+                    exit()
