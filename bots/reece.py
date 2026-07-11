@@ -35,7 +35,7 @@ ATTACK_SCRIPT_TEMPLATE = (
 type Float = float | np.float32
 
 
-class Reece(Bot):
+class ReeceBot(Bot):
 
     def __init__(self, character: Character | None=None) -> None:
         super().__init__(character)
