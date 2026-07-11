@@ -28,6 +28,20 @@ class Bot(ABC):
         else:
             logging.info(f"Connected controller {self.port}")
 
+    def menu(self, gamestate):
+        """Per-frame hook that runs at menus *before* ``MenuHelper`` reads
+        ``self.character``.
+
+        Override this if your bot needs to mutate ``self.character`` during
+        the character-select screen (e.g. to avoid colliding with another
+        bot's pick). The default implementation is a no-op so bots that do
+        not care about menu logic are unaffected.
+
+        ``fight.py`` is responsible for invoking this each frame while the
+        game is in a menu state.
+        """
+        pass
+
     @abstractmethod
     def fight(self, gamestate: GameState):    
        ...
