@@ -8,7 +8,7 @@ class LinyuPikachu(Bot):
     """A readable first bot: move toward the opponent, poke, attack, and recover."""
 
     def __init__(self, character=None):
-        super().__init__(melee.Character.PIKACHU)
+        super().__init__(character or melee.Character.PIKACHU)
         self.frame = 0
 
     def fight(self, gamestate):
