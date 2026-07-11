@@ -61,8 +61,8 @@ APPROACH_RANGE = 30.0  # inside dash distance -- commit to an approach
 STANDOFF_MIN_RANGE = 40.0   # closer than this and STANDOFF is pointless
 STAGE_HALF_WIDTH = 70.0     # ~ Final Destination blast-zone minus ledge
 
-STANCE_LOCK_FRAMES = 30     # min frames before we re-select the stance
-STANDOFF_PROJECTILE_EVERY = 25  # frames between neutral-B shots while zoning
+STANCE_LOCK_FRAMES = 18     # min frames before we re-select the stance (snappier switching)
+STANDOFF_PROJECTILE_EVERY = 30  # frames between neutral-B shots while zoning
 KILL_HEALTH = 100         # our_pct at/above this => "health is really bad"
 
 
@@ -99,32 +99,32 @@ HAS_PROJECTILE = frozenset({
 #   jumps>1 or airmob>=0.20            -> SLY-friendly (float/drift bait)
 #   grab-centric kits (% change)       -> ROGUE-friendly
 CHARACTER_DISPOSITION: Dict[Character, Dict[Stance, float]] = {
-    Character.FOX:        {Stance.ATTACK: 1.0, Stance.ROGUE: 0.6, Stance.SLY: 0.2},
-    Character.FALCO:      {Stance.ATTACK: 1.0, Stance.ROGUE: 0.4, Stance.SLY: 0.3},
-    Character.CPTFALCON:  {Stance.ATTACK: 0.9, Stance.ROGUE: 0.9, Stance.SLY: 0.3},
-    Character.SHEIK:      {Stance.ATTACK: 1.0, Stance.ROGUE: 0.7, Stance.SLY: 0.3},
-    Character.MARTH:     {Stance.DEFENCE: 0.9, Stance.SLY: 0.6, Stance.ROGUE: 0.4, Stance.ATTACK: 0.3},
-    Character.ROY:        {Stance.ATTACK: 0.9, Stance.DEFENCE: 0.5, Stance.ROGUE: 0.4},
-    Character.DOC:        {Stance.ATTACK: 0.8, Stance.SLY: 0.5, Stance.ROGUE: 0.3},
-    Character.MARIO:      {Stance.ATTACK: 0.8, Stance.SLY: 0.4, Stance.ROGUE: 0.3},
-    Character.LUIGI:      {Stance.ROGUE: 0.9, Stance.ATTACK: 0.6, Stance.SLY: 0.3},
-    Character.DK:         {Stance.ATTACK: 0.7, Stance.SLY: 0.5, Stance.ROGUE: 0.4},
-    Character.BOWSER:     {Stance.DEFENCE: 0.9, Stance.SLY: 0.5, Stance.ATTACK: 0.3},
-    Character.GANONDORF:   {Stance.SLY: 0.9, Stance.DEFENCE: 0.6, Stance.ATTACK: 0.3},
-    Character.POPO:       {Stance.ROGUE: 1.0, Stance.SLY: 0.6, Stance.ATTACK: 0.4},
-    Character.NANA:       {Stance.ROGUE: 1.0, Stance.SLY: 0.6, Stance.ATTACK: 0.4},
-    Character.JIGGLYPUFF: {Stance.SLY: 1.0, Stance.DEFENCE: 0.6, Stance.ROGUE: 0.4},
-    Character.KIRBY:      {Stance.SLY: 0.8, Stance.ROGUE: 0.5, Stance.ATTACK: 0.3},
-    Character.PEACH:      {Stance.SLY: 0.7, Stance.DEFENCE: 0.5, Stance.ROGUE: 0.4},
-    Character.SAMUS:      {Stance.DEFENCE: 0.7, Stance.SLY: 0.6, Stance.ROGUE: 0.3},
-    Character.LINK:       {Stance.DEFENCE: 0.7, Stance.SLY: 0.5, Stance.ROGUE: 0.3},
-    Character.YLINK:      {Stance.DEFENCE: 0.5, Stance.ROGUE: 0.5, Stance.SLY: 0.4},
-    Character.YOSHI:      {Stance.SLY: 0.7, Stance.DEFENCE: 0.5, Stance.ROGUE: 0.4},
-    Character.PIKACHU:     {Stance.ATTACK: 0.7, Stance.ROGUE: 0.6, Stance.SLY: 0.3},
-    Character.PICHU:       {Stance.ATTACK: 0.9, Stance.ROGUE: 0.5, Stance.SLY: 0.2},
-    Character.GAMEANDWATCH: {Stance.SLY: 0.7, Stance.DEFENCE: 0.5, Stance.ROGUE: 0.4},
-    Character.NESS:       {Stance.ROGUE: 0.7, Stance.SLY: 0.5, Stance.ATTACK: 0.3},
-    Character.MEWTWO:     {Stance.SLY: 0.7, Stance.DEFENCE: 0.4, Stance.ROGUE: 0.3},
+    Character.FOX:        {Stance.ATTACK: 1.4, Stance.ROGUE: 0.8, Stance.SLY: 0.2},
+    Character.FALCO:      {Stance.ATTACK: 1.3, Stance.ROGUE: 0.6, Stance.SLY: 0.2},
+    Character.CPTFALCON:  {Stance.ATTACK: 1.3, Stance.ROGUE: 1.1, Stance.SLY: 0.2},
+    Character.SHEIK:      {Stance.ATTACK: 1.4, Stance.ROGUE: 0.9, Stance.SLY: 0.2},
+    Character.MARTH:     {Stance.ATTACK: 0.9, Stance.DEFENCE: 0.7, Stance.SLY: 0.4, Stance.ROGUE: 0.6},
+    Character.ROY:        {Stance.ATTACK: 1.2, Stance.ROGUE: 0.7, Stance.DEFENCE: 0.3},
+    Character.DOC:        {Stance.ATTACK: 1.1, Stance.SLY: 0.4, Stance.ROGUE: 0.5},
+    Character.MARIO:      {Stance.ATTACK: 1.1, Stance.SLY: 0.3, Stance.ROGUE: 0.5},
+    Character.LUIGI:      {Stance.ROGUE: 1.2, Stance.ATTACK: 0.9, Stance.SLY: 0.2},
+    Character.DK:         {Stance.ATTACK: 1.0, Stance.SLY: 0.3, Stance.ROGUE: 0.6},
+    Character.BOWSER:     {Stance.ATTACK: 0.7, Stance.DEFENCE: 0.6, Stance.SLY: 0.3},
+    Character.GANONDORF:   {Stance.SLY: 0.7, Stance.ATTACK: 0.6, Stance.DEFENCE: 0.4},
+    Character.POPO:       {Stance.ROGUE: 1.3, Stance.ATTACK: 0.7, Stance.SLY: 0.3},
+    Character.NANA:       {Stance.ROGUE: 1.3, Stance.ATTACK: 0.7, Stance.SLY: 0.3},
+    Character.JIGGLYPUFF: {Stance.SLY: 0.9, Stance.ROGUE: 0.7, Stance.DEFENCE: 0.4},
+    Character.KIRBY:      {Stance.SLY: 0.7, Stance.ROGUE: 0.7, Stance.ATTACK: 0.5},
+    Character.PEACH:      {Stance.SLY: 0.6, Stance.ROGUE: 0.6, Stance.DEFENCE: 0.3},
+    Character.SAMUS:      {Stance.ATTACK: 0.7, Stance.SLY: 0.5, Stance.ROGUE: 0.5},
+    Character.LINK:       {Stance.ATTACK: 0.8, Stance.SLY: 0.4, Stance.ROGUE: 0.5},
+    Character.YLINK:      {Stance.ROGUE: 0.8, Stance.ATTACK: 0.7, Stance.SLY: 0.3},
+    Character.YOSHI:      {Stance.ROGUE: 0.8, Stance.SLY: 0.6, Stance.ATTACK: 0.4},
+    Character.PIKACHU:     {Stance.ATTACK: 1.0, Stance.ROGUE: 0.8, Stance.SLY: 0.2},
+    Character.PICHU:       {Stance.ATTACK: 1.2, Stance.ROGUE: 0.7, Stance.SLY: 0.1},
+    Character.GAMEANDWATCH: {Stance.ROGUE: 0.8, Stance.ATTACK: 0.6, Stance.SLY: 0.4},
+    Character.NESS:       {Stance.ROGUE: 1.0, Stance.ATTACK: 0.6, Stance.SLY: 0.3},
+    Character.MEWTWO:     {Stance.ROGUE: 0.7, Stance.SLY: 0.5, Stance.ATTACK: 0.4},
 }
 
 
@@ -219,8 +219,8 @@ def select_stance(bot, me, opp, gamestate) -> Stance:
 
     # Behind on stocks -> chase a comeback, never camp.
     if stock_diff < 0:
-        weights[Stance.ATTACK] = weights.get(Stance.ATTACK, 0) + 0.6
-        weights[Stance.ROGUE] = weights.get(Stance.ROGUE, 0) + 0.3
+        weights[Stance.ATTACK] = weights.get(Stance.ATTACK, 0) + 0.9
+        weights[Stance.ROGUE] = weights.get(Stance.ROGUE, 0) + 0.5
         weights[Stance.STANDOFF] = 0.0
 
     # Ahead on stocks -> safe/bait play; STANDOFF becomes possible (if proj).
@@ -230,7 +230,7 @@ def select_stance(bot, me, opp, gamestate) -> Stance:
 
     # They're at kill % -> press for the kill.
     if their_pct >= KILL_HEALTH:
-        weights[Stance.ATTACK] = weights.get(Stance.ATTACK, 0) + 0.4
+        weights[Stance.ATTACK] = weights.get(Stance.ATTACK, 0) + 0.7
         weights[Stance.SLY] = weights.get(Stance.SLY, 0) + 0.2
 
     # Opponent off-stage -> edgeguard bias (SLY is our edgeguarder).
@@ -264,7 +264,7 @@ def select_stance(bot, me, opp, gamestate) -> Stance:
     )
     if nothing_happening:
         top = max(weights.values(), default=0.0)
-        weights[Stance.ATTACK] = max(weights.get(Stance.ATTACK, 0.0), top + 0.15)
+        weights[Stance.ATTACK] = max(weights.get(Stance.ATTACK, 0.0), top + 0.35)
 
     # Within attack range -> never STANDOFF (you can't camp at point-blank).
     if distance <= ATTACK_RANGE:
@@ -289,9 +289,9 @@ def select_stance(bot, me, opp, gamestate) -> Stance:
         # disposition table omits STANDOFF by design). The bad-health boost
         # upstream already loaded the weight; the higher cap here lets it ride
         # at parity with SLY, while normal situations stay "preferably not
-        # often" with a modest 0.5 baseline.
-        cap = 2.0 if our_pct >= KILL_HEALTH else 0.7
-        baseline = 0.5
+        # often" with a modest 0.35 baseline.
+        cap = 1.5 if our_pct >= KILL_HEALTH else 0.5
+        baseline = 0.35
         weights[Stance.STANDOFF] = max(baseline, min(weights.get(Stance.STANDOFF, 0.0), cap))
 
     # --- Choose ---------------------------------------------------------------
@@ -301,7 +301,7 @@ def select_stance(bot, me, opp, gamestate) -> Stance:
     else:
         # Weighted random with a small jitter so the bot isn't 100% deterministic
         # given identical situations. Mostly picks the argmax.
-        if random.random() < 0.15:
+        if random.random() < 0.10:
             # Explore: weighted-random pick across all nonzero stances.
             total = sum(nonzero.values())
             r = random.random() * total
@@ -353,25 +353,37 @@ def _away(onleft: bool) -> float:
 def behave_attack(bot, me, opp, gamestate, onleft, distance):
     """Rushdown: move toward the opponent (chasing to platforms) and hit.
 
-    Still defends reactively — if the opponent is in an active attack
-    animation and we're in their range, we shield instead of eating the hit.
+    Aggressive short-hop aerial approaches, fast-fall aerials, and
+    mixups. Still defends reactively — if the opponent is in an active
+    attack animation and we're in their range, we shield instead of
+    eating the hit.
     """
     c = _ctrl(bot)
     if distance > APPROACH_RANGE:
-        # Far -> chase (will jump if the opponent is on a platform above us).
+        # Far -> aggressive chase with more short-hop aerial approaches.
+        # Mix in short-hop aerials 30% of the time when not elevated.
+        opp_elevated = opp is not None and opp.position.y > me.position.y + mv.ELEVATED_ABOVE
+        if random.random() < 0.30 and me.on_ground and not opp_elevated:
+            mv.move(bot, me, opp, gamestate, onleft, "chase")
+            c.press_button(Button.BUTTON_X)  # short hop
+            return
         mv.move(bot, me, opp, gamestate, onleft, "chase")
         c.release_button(Button.BUTTON_A)
         c.release_button(Button.BUTTON_B)
         return
     if distance > ATTACK_RANGE:
-        # Closing the gap; use "chase" so we also jump if the opponent is
-        # above us at this range.
+        # Closing the gap -- more aerial approaches for fancy movement.
         opp_elevated = opp is not None and opp.position.y > me.position.y + mv.ELEVATED_ABOVE
-        if random.random() < 0.05 and me.on_ground and not opp_elevated:
-            # Same-level short-hop-aerial mixup. ``chase`` will just dash here
-            # (opp not elevated), so we add the X ourselves.
+        roll = random.random()
+        if roll < 0.40 and me.on_ground and not opp_elevated:
+            # Short-hop aerial approach -- nair/fair/bair mixup.
             mv.move(bot, me, opp, gamestate, onleft, "chase")
-            c.press_button(Button.BUTTON_X)
+            c.press_button(Button.BUTTON_X)  # short hop
+            return
+        elif roll < 0.55 and me.on_ground and not opp_elevated:
+            # Tomahawk: short-hop then empty land into grab.
+            mv.move(bot, me, opp, gamestate, onleft, "chase")
+            c.press_button(Button.BUTTON_X)  # jump, will land and grab next
             return
         mv.move(bot, me, opp, gamestate, onleft, "chase")
         c.release_button(Button.BUTTON_A)
@@ -380,49 +392,140 @@ def behave_attack(bot, me, opp, gamestate, onleft, distance):
     # Reactive defence: the opponent is throwing a hitbox and we're close
     # enough to get clipped -- shield rather than trade.
     if is_attacking(opp) and distance < mv.THREAT_RANGE:
+        # Out of shield: shield then jump-cancel into aerial or grab.
+        roll = random.random()
+        if roll < 0.35:
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.press_button(Button.BUTTON_R)  # shield the hit
+            return
+        elif roll < 0.60:
+            # OOS option: jump out of shield into aerial.
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.press_button(Button.BUTTON_X)  # jump OOS
+            return
+        # Or just shield.
         mv.move(bot, me, opp, gamestate, onleft, "hold")
         c.press_button(Button.BUTTON_R)
         return
     if is_shielding(opp):
-        mv.move(bot, me, opp, gamestate, onleft, "hold")
-        c.press_button(Button.BUTTON_Z)   # grab the shield
+        # Opponent shielding -- mix between grab, tomahawk, and pressure.
+        roll = random.random()
+        if roll < 0.50:
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.press_button(Button.BUTTON_Z)   # grab the shield
+        elif roll < 0.70 and me.on_ground:
+            # Shield pressure: short hop aerial on their shield.
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.press_button(Button.BUTTON_X)  # short hop for aerial pressure
+        else:
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.tilt_analog(Button.BUTTON_C, _toward(onleft), 0.5)  # f-smash pressure
         return
     if not me.on_ground:
-        mv.move(bot, me, opp, gamestate, onleft, "hold")
-        c.press_button(Button.BUTTON_A)  # aerial nair
+        # Airborne -- use c-stick for directional aerials, fast-fall.
+        roll = random.random()
+        if roll < 0.30:
+            c.tilt_analog(Button.BUTTON_C, _toward(onleft), 1.0)  # fair (forward)
+        elif roll < 0.55:
+            c.tilt_analog(Button.BUTTON_C, _away(onleft), 1.0)   # bair (behind)
+        elif roll < 0.70:
+            c.tilt_analog(Button.BUTTON_C, 0.5, 1.0)             # uair (up)
+        else:
+            c.tilt_analog(Button.BUTTON_C, 0.5, 0.0)             # dair (down)
+        # Fast-fall after aerial hits.
+        if getattr(me, 'speed_y_self', 0.0) > 0:
+            c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.0)  # hold down to fast-fall
         return
-    # Grounded: jab, with occasional c-stick f-smash.
-    mv.move(bot, me, opp, gamestate, onleft, "hold")
-    if random.random() < 0.10:
-        c.tilt_analog(Button.BUTTON_C, _toward(onleft), 0.5)
-    else:
+    # Grounded -- mix between jab, tilt, smash, and dash attack.
+    roll = random.random()
+    if roll < 0.25:
+        c.press_button(Button.BUTTON_A)  # jab
+    elif roll < 0.45:
+        # Up-tilt for anti-air / combo starter.
+        c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.8)  # tilt up
         c.press_button(Button.BUTTON_A)
+    elif roll < 0.60:
+        # Down-tilt for poke.
+        c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.2)  # tilt down
+        c.press_button(Button.BUTTON_A)
+    elif roll < 0.75:
+        # C-stick aerial approach -- forward smash or dash attack.
+        c.tilt_analog(Button.BUTTON_C, _toward(onleft), 0.5)
+    elif roll < 0.88:
+        # Dash attack for burst movement.
+        c.tilt_analog(Button.BUTTON_MAIN, _toward(onleft), 0.5)
+        c.press_button(Button.BUTTON_A)
+    else:
+        # Full smash attack -- commit to the kill.
+        c.tilt_analog(Button.BUTTON_C, _toward(onleft), 1.0)  # c-stick full tilt = f-smash
 
 
 def behave_defence(bot, me, opp, gamestate, onleft, distance):
-    """Proactive defence: shield within the threat range *whether or not the
-    opponent is attacking*, poke from outside it, and punish whiffs.
-
-    This is the stance's defining feature — it puts up its guard by default
-    whenever the opponent can reach it, not just when it detects an incoming
-    hit. Spot-dodges and rolls mix in to avoid grabs that would catch the
-    shield. Outside the threat range it pokes with f-tilt and holds spacing."""
+    """Proactive defence with aggressive counter-attacks. Shields within the
+    threat range *whether or not the opponent is attacking*, then punishes
+    whiffs with varied options. Flashier out-of-shield and spacing tools."""
     c = _ctrl(bot)
-    # Punish window: opponent is in hitlag/landing -> step in and smash.
+    # Punish window: opponent is in hitlag/landing -> commit to a punish.
     if in_punish_state(opp) and distance < SPACING_RANGE * 1.5:
-        mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
-        c.tilt_analog(Button.BUTTON_C, _toward(onleft), 0.5)
+        roll = random.random()
+        if roll < 0.30:
+            # F-smash punish.
+            mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
+            c.tilt_analog(Button.BUTTON_C, _toward(onleft), 1.0)
+        elif roll < 0.50 and me.on_ground:
+            # Grab punish.
+            mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
+            c.press_button(Button.BUTTON_Z)
+        elif roll < 0.70:
+            # Dash attack.
+            mv.move(bot, me, opp, gamestate, onleft, "approach")
+            c.press_button(Button.BUTTON_A)
+        else:
+            # Tilt or aerial punish.
+            mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
+            if me.on_ground:
+                c.tilt_analog(Button.BUTTON_MAIN, _toward(onleft), 0.5)
+                c.press_button(Button.BUTTON_A)  # f-tilt
+            else:
+                c.tilt_analog(Button.BUTTON_C, _toward(onleft), 1.0)  # aerial
         return
     # Within the threat range -> defend proactively (shield / spot-dodge / roll).
     # This is "regardless if attacks are coming your way" — we guard by default
     # whenever the opponent can hit us, whether or not we see an attack.
     if distance < mv.THREAT_RANGE:
-        mv.defend(bot, me, opp, gamestate, onleft, distance)
+        # Mix between pure defend and OOS counter-attack.
+        roll = random.random()
+        if roll < 0.65:
+            mv.defend(bot, me, opp, gamestate, onleft, distance)
+        elif roll < 0.80 and me.on_ground:
+            # OOS option: jump out of shield then aerial.
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.press_button(Button.BUTTON_X)  # jump OOS
+        else:
+            # Shield grab.
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.press_button(Button.BUTTON_Z)
         return
-    # At poke range -> f-tilt (walk + A) as a safe spacing tool.
+    # At poke range -> varied pokes: f-tilt, d-tilt, or short-hop aerial.
     if distance <= SPACING_RANGE * 1.3:
-        mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
-        c.press_button(Button.BUTTON_A)
+        roll = random.random()
+        if roll < 0.45:
+            # Standard f-tilt poke.
+            mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
+            c.press_button(Button.BUTTON_A)
+        elif roll < 0.65:
+            # D-tilt poke.
+            mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
+            c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.2)
+            c.press_button(Button.BUTTON_A)
+        elif roll < 0.85 and me.on_ground:
+            # Short-hop aerial poke.
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.press_button(Button.BUTTON_X)
+        else:
+            # C-stick fair for spacing.
+            mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
+            c.tilt_analog(Button.BUTTON_C, _toward(onleft), 0.5)
         return
     # Feast range -> walk cautiously toward to re-engage spacing.
     mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
@@ -477,43 +580,86 @@ def behave_standoff(bot, me, opp, gamestate, onleft, distance):
 
 
 def behave_rogue(bot, me, opp, gamestate, onleft, distance):
-    """Dash-dance + cross-up + grabs. Moves toward the opponent."""
+    """Flashy dash-dance, cross-ups, tomahawk grabs, and aerial mixups.
+    Moves toward the opponent with unpredictable rhythm."""
     c = _ctrl(bot)
     toward_dir = 1 if onleft else -1
-    # In range -> grab or cross-up.
+    # In range -> grab, cross-up, or pressure with aerials.
     if distance <= ATTACK_RANGE * 1.2:
         # Reactive defence: shield incoming attacks even while rushing.
         if is_attacking(opp) and distance < mv.THREAT_RANGE:
-            mv.move(bot, me, opp, gamestate, onleft, "hold")
-            c.press_button(Button.BUTTON_R)
+            # OOS option: shield or jump OOS.
+            if random.random() < 0.5:
+                mv.move(bot, me, opp, gamestate, onleft, "hold")
+                c.press_button(Button.BUTTON_R)
+            else:
+                mv.move(bot, me, opp, gamestate, onleft, "hold")
+                c.press_button(Button.BUTTON_X)  # jump OOS
             return
-        if is_shielding(opp) or random.random() < 0.4:
+        if is_shielding(opp):
+            # Shielded opponent -> grab (tomahawk) or shield pressure.
+            roll = random.random()
+            if roll < 0.55:
+                mv.move(bot, me, opp, gamestate, onleft, "hold")
+                c.press_button(Button.BUTTON_Z)  # grab the shield
+            elif roll < 0.75 and me.on_ground:
+                # Tomahawk: empty land grab.
+                mv.move(bot, me, opp, gamestate, onleft, "hold")
+                c.press_button(Button.BUTTON_Z)
+            else:
+                mv.move(bot, me, opp, gamestate, onleft, "hold")
+                c.press_button(Button.BUTTON_X)  # short hop aerial on shield
+            return
+        # In range -- mix between grab, aerial, and smash.
+        roll = random.random()
+        if roll < 0.30:
+            # Grab (tomahawk or grounded).
             mv.move(bot, me, opp, gamestate, onleft, "hold")
             c.press_button(Button.BUTTON_Z)
-            return
-        # Cross-up: jump over and aerial behind them.
-        if me.on_ground and random.random() < 0.3:
+        elif roll < 0.55 and me.on_ground:
+            # Cross-up: jump over and aerial behind them.
             mv.move(bot, me, opp, gamestate, onleft, "chase")
             c.press_button(Button.BUTTON_X)
-            return
-        mv.move(bot, me, opp, gamestate, onleft, "hold")
-        c.press_button(Button.BUTTON_A)
+        elif roll < 0.75:
+            # Aerial pressure -- c-stick directionals.
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            if not me.on_ground:
+                c.tilt_analog(Button.BUTTON_C, _toward(onleft), 1.0)  # fair
+            else:
+                c.press_button(Button.BUTTON_X)  # short hop into aerial
+        else:
+            # Smash attack commitment.
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.tilt_analog(Button.BUTTON_C, _toward(onleft), 1.0)  # f-smash
         return
-    # Mid/far -> dash-dance: oscillate stick by frame parity to look tricky,
-    # but never dash off the stage. If the back-dash would walk us off a ledge,
-    # just dash toward instead (keeps the pressure without suiciding).
-    flip = (gamestate.frame // 6) % 2 == 0
-    if flip or mv.near_ledge(me, gamestate, -toward_dir):
-        c.tilt_analog(Button.BUTTON_MAIN, _toward(onleft), 0.5)
+    # Mid/far -> fancy dash-dance: variable rhythm to look tricky,
+    # but never dash off the stage. Mix in short hops and wavedash-like
+    # approaches for flashier movement.
+    roll = random.random()
+    if roll < 0.15 and me.on_ground:
+        # Short-hop aerial approach.
+        mv.move(bot, me, opp, gamestate, onleft, "chase")
+        c.press_button(Button.BUTTON_X)  # short hop
+    elif roll < 0.30 and me.on_ground:
+        # Burst dash attack.
+        mv.move(bot, me, opp, gamestate, onleft, "approach")
+        c.press_button(Button.BUTTON_A)  # dash attack
     else:
-        c.tilt_analog(Button.BUTTON_MAIN, _away(onleft), 0.5)
+        # Variable-rhythm dash-dance.
+        phase = (gamestate.frame // 5) % 3  # 3-phase rhythm
+        if phase == 0 or mv.near_ledge(me, gamestate, -toward_dir):
+            c.tilt_analog(Button.BUTTON_MAIN, _toward(onleft), 0.5)
+        elif phase == 1:
+            c.tilt_analog(Button.BUTTON_MAIN, _away(onleft), 0.5)
+        else:
+            c.tilt_analog(Button.BUTTON_MAIN, _toward(onleft), 0.5)  # double back
     c.release_button(Button.BUTTON_A)
     c.release_button(Button.BUTTON_Z)
 
 
 def behave_sly(bot, me, opp, gamestate, onleft, distance):
-    """Bait just outside their range, whiff-punish, edgeguard. Can advance or
-    retreat; uses platforms to reset spacing (drop-through) when cornered."""
+    """Flashy bait-and-punish with varied edgeguards and aerial combos.
+    Hovers just outside opponent's range, then commits to fancy punishes."""
     c = _ctrl(bot)
     # Edgeguard: opponent off-stage -> go to their ledge side and poke.
     if is_off_stage(opp) and not is_off_stage(me):
@@ -521,32 +667,67 @@ def behave_sly(bot, me, opp, gamestate, onleft, distance):
         left_safe, right_safe = mv.stage_bounds(gamestate)
         ledge_x = right_safe if opp.position.x > 0 else left_safe
         if abs(me.position.x - ledge_x) > 4:
-            # mv.move's ``onleft`` follows the fight() convention: onleft=True means
-            # dash right (I'm to the left of the target).
             onleft_ledge = me.position.x < ledge_x
             mv.move(bot, me, opp, gamestate, onleft_ledge, "approach")
             return
-        # At the ledge: d-tilt (down + A) to catch a low recovery, or up-smash
-        # (c-stick up) to catch a high one. Pick by opponent height.
+        # At the ledge: varied edgeguard options for fanciness.
+        roll = random.random()
         if opp.position.y > -10:
-            c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.5)
-            c.tilt_analog(Button.BUTTON_C, 0.5, 1.0)
-            return
-        c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.0)   # stick down
-        c.press_button(Button.BUTTON_A)
+            # Opponent is high -> up-smash, up-tilt, or short-hop up-air.
+            if roll < 0.35:
+                c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.5)
+                c.tilt_analog(Button.BUTTON_C, 0.5, 1.0)  # up-smash
+            elif roll < 0.65:
+                c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.8)  # tilt up
+                c.press_button(Button.BUTTON_A)  # up-tilt
+            else:
+                c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.5)
+                c.press_button(Button.BUTTON_X)  # short hop for up-air
+        else:
+            # Opponent is low -> d-tilt, down-smash, or run-off fair.
+            if roll < 0.40:
+                c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.0)
+                c.press_button(Button.BUTTON_A)  # d-tilt
+            elif roll < 0.70:
+                c.tilt_analog(Button.BUTTON_MAIN, 0.5, 0.0)
+                c.tilt_analog(Button.BUTTON_C, 0.5, 0.0)  # down-smash
+            else:
+                # Run off stage with a fair (risky but flashy).
+                mv.move(bot, me, opp, gamestate, onleft_ledge, "approach")
+                c.press_button(Button.BUTTON_X)  # jump off for aerial
         return
 
-    # Punish: opponent committed and is in hitlag / landing lag -> smash in.
+    # Punish: opponent committed and is in hitlag / landing lag -> commit hard.
     if in_punish_state(opp) and distance < SPACING_RANGE * 1.5:
-        mv.move(bot, me, opp, gamestate, onleft, "approach")
-        c.tilt_analog(Button.BUTTON_C, _toward(onleft), 0.5)
+        roll = random.random()
+        if roll < 0.40:
+            # Full commit: c-stick smash.
+            mv.move(bot, me, opp, gamestate, onleft, "approach")
+            c.tilt_analog(Button.BUTTON_C, _toward(onleft), 1.0)  # f-smash
+        elif roll < 0.65 and me.on_ground:
+            # Tomahawk grab punish.
+            mv.move(bot, me, opp, gamestate, onleft, "approach")
+            c.press_button(Button.BUTTON_Z)
+        elif roll < 0.85:
+            # Aerial punish -- short hop into c-stick aerial.
+            mv.move(bot, me, opp, gamestate, onleft, "chase")
+            c.press_button(Button.BUTTON_X)  # jump
+        else:
+            # Dash attack burst.
+            mv.move(bot, me, opp, gamestate, onleft, "approach")
+            c.press_button(Button.BUTTON_A)
         return
 
-    # Shielded opponent -> wait (don't hit shield unless we grab). Grab mix-up.
+    # Shielded opponent -> grab mix-up or retreat with aerial.
     if is_shielding(opp) and distance < SPACING_RANGE:
-        if random.random() < 0.3:
+        roll = random.random()
+        if roll < 0.45:
             mv.move(bot, me, opp, gamestate, onleft, "hold")
-            c.press_button(Button.BUTTON_Z)
+            c.press_button(Button.BUTTON_Z)  # grab
+        elif roll < 0.70 and me.on_ground:
+            # Short hop aerial on shield for pressure.
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.press_button(Button.BUTTON_X)
         else:
             mv.move(bot, me, opp, gamestate, onleft, "retreat")
         return
@@ -557,9 +738,20 @@ def behave_sly(bot, me, opp, gamestate, onleft, distance):
     if distance < desired * 0.85:
         mv.move(bot, me, opp, gamestate, onleft, "retreat")
     elif distance > desired * 1.15:
-        mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
+        # Approaching -- mix in aerials for fancier movement.
+        if random.random() < 0.25 and me.on_ground:
+            mv.move(bot, me, opp, gamestate, onleft, "chase")
+            c.press_button(Button.BUTTON_X)  # short hop approach
+        else:
+            mv.move(bot, me, opp, gamestate, onleft, "approach_walk")
     else:
-        mv.move(bot, me, opp, gamestate, onleft, "hold")
+        # In range -- subtle bait and punish.
+        if random.random() < 0.15:
+            # Quick jab or tilt to bait a reaction.
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
+            c.press_button(Button.BUTTON_A)
+        else:
+            mv.move(bot, me, opp, gamestate, onleft, "hold")
     c.release_button(Button.BUTTON_A)
     c.release_button(Button.BUTTON_Z)
 

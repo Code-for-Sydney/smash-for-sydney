@@ -171,6 +171,23 @@ def _jump(bot):
     _ctrl(bot).press_button(Button.BUTTON_X)
 
 
+def _jump(bot):
+    _ctrl(bot).press_button(Button.BUTTON_X)
+
+
+def _short_hop(bot):
+    """Tap X briefly for a short hop (release the button quickly).
+    We simulate this by pressing X -- in practice the frame-by-frame
+    release in fight() keeps it short."""
+    _ctrl(bot).press_button(Button.BUTTON_X)
+    # Release on next frame is handled by the caller or fight()'s release_all.
+
+
+def _fast_fall(bot):
+    """Fast-fall: hold down when airborne and moving downward."""
+    _ctrl(bot).tilt_analog(Button.BUTTON_MAIN, 0.5, 0.0)
+
+
 def _can_double_jump(me) -> bool:
     """True if we are airborne, still hold a jump, and have begun to fall.
 
