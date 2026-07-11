@@ -20,8 +20,16 @@ JUMP_HOLD_FRAMES = 10
 ATTACK_DISTANCE = 20.0
 DOWN_SMASH_DISTANCE = 10.0
 EDGE_MARGIN = 20.0
-ATTACK_DURATION_FRAMES = 3
 ATTACK_COOLDOWN_FRAMES = 20
+
+ATTACK_SCRIPT_TEMPLATE = (
+    ("neutral",),
+    ("wait", 1),
+    ("tilt", None, None, None),
+    ("press_button", melee.enums.Button.BUTTON_A),
+    ("wait", 3),
+    ("release_button", melee.enums.Button.BUTTON_A),
+)
 
 
 type Float = float | np.float32
@@ -34,8 +42,10 @@ class Reece(Bot):
         self._jump_requested = False
         self._jump_hold_elapsed = 0
         self._state = "moving_to_opponent"
-        self._attack_frames_remaining = 0
         self._attack_cooldown_remaining = 0
+        self._active_script: tuple[tuple[object, ...], ...] | None = None
+        self._script_index = 0
+        self._script_wait_remaining = 0
 
     def fight(self, gamestate: GameState) -> None:
         if self.controller is None or self.port is None:
@@ -50,16 +60,20 @@ class Reece(Bot):
 
         target = self._nearest_opponent(gamestate, me)
         if target is None:
+            self._cancel_script()
             self._state = "idle"
             self._release_inputs()
             return
 
         left_edge, right_edge, floor_y, stage_center = self._get_stage_geometry(gamestate)
+        previous_state = self._state
         self._state = self._choose_state(me, target, left_edge, right_edge, floor_y)
+        if self._state != previous_state:
+            self._cancel_script()
         self._run_state(me, target, left_edge, right_edge, floor_y, stage_center)
 
     def _choose_state(self, me: PlayerState, target: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float):
-        if self._attack_frames_remaining > 0:
+        if self._active_script is not None:
             return "attacking"
 
         if self._attack_cooldown_remaining > 0:
@@ -197,34 +211,89 @@ class Reece(Bot):
     def _perform_smash_attack(self, me: PlayerState, target: PlayerState):
         self._release_jump()
 
-        assert self.controller is not None
+        if self._active_script is None:
+            self._queue_script(self._build_attack_script(me, target))
 
+        if self._run_active_script():
+            return
+
+        self._attack_cooldown_remaining = ATTACK_COOLDOWN_FRAMES
+
+    def _build_attack_script(self, me: PlayerState, target: PlayerState):
         horizontal_distance = abs(target.position.x - me.position.x)
         vertical_distance = abs(target.position.y - me.position.y)
 
-        if self._attack_frames_remaining <= 0:
-            self._attack_frames_remaining = ATTACK_DURATION_FRAMES + 2
-            if horizontal_distance <= DOWN_SMASH_DISTANCE and vertical_distance <= DOWN_SMASH_DISTANCE:
-                self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.5, 0.0)
-            elif target.position.x < me.position.x:
-                self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.0, 0.5)
+        if horizontal_distance <= DOWN_SMASH_DISTANCE and vertical_distance <= DOWN_SMASH_DISTANCE:
+            tilt_x, tilt_y = 0.5, 0.0
+        elif target.position.x < me.position.x:
+            tilt_x, tilt_y = 0.0, 0.5
+        else:
+            tilt_x, tilt_y = 1.0, 0.5
+
+        steps = []
+        for step in ATTACK_SCRIPT_TEMPLATE:
+            action = step[0]
+            if action == "tilt":
+                steps.append(("tilt", melee.enums.Button.BUTTON_MAIN, tilt_x, tilt_y))
             else:
-                self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 1.0, 0.5)
-            return
+                steps.append(step)
+        return tuple(steps)
 
-        self._attack_frames_remaining -= 1
-        if self._attack_frames_remaining == ATTACK_DURATION_FRAMES + 1:
+    def _queue_script(self, script):
+        self._cancel_script()
+        if script is None:
+            return
+        self._active_script = tuple(script)
+        self._script_index = 0
+        self._script_wait_remaining = 0
+
+    def _cancel_script(self) -> None:
+        self._active_script = None
+        self._script_index = 0
+        self._script_wait_remaining = 0
+
+    def _run_active_script(self) -> bool:
+        if self._active_script is None or self.controller is None:
+            return False
+
+        if self._script_wait_remaining > 0:
+            self._script_wait_remaining -= 1
+            return True
+
+        if self._script_index >= len(self._active_script):
+            self._cancel_script()
+            return False
+
+        step = self._active_script[self._script_index]
+        action = step[0]
+        if action == "tilt" and len(step) >= 4:
+            self.controller.tilt_analog(step[1], float(step[2]), float(step[3]))
+            self._script_index += 1
+            return True
+
+        if action == "neutral":
             self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.5, 0.5)
-            return
+            self._script_index += 1
+            return True
 
-        if self._attack_frames_remaining == ATTACK_DURATION_FRAMES:
-            self.controller.press_button(melee.enums.Button.BUTTON_A)
-            return
+        if action == "press_button" and len(step) >= 2:
+            self.controller.press_button(step[1])
+            self._script_index += 1
+            return True
 
-        if self._attack_frames_remaining <= 0:
-            self.controller.release_button(melee.enums.Button.BUTTON_A)
-            self._attack_frames_remaining = 0
-            self._attack_cooldown_remaining = ATTACK_COOLDOWN_FRAMES
+        if action == "release_button" and len(step) >= 2:
+            self.controller.release_button(step[1])
+            self._script_index += 1
+            return True
+
+        if action == "wait" and len(step) >= 2:
+            frames = max(1, int(step[1]))
+            self._script_wait_remaining = max(0, frames - 1)
+            self._script_index += 1
+            return True
+
+        self._script_index += 1
+        return True
 
     def _move_horizontally(self, me_x: Float, target_x: Float):
         assert self.controller is not None
@@ -266,5 +335,6 @@ class Reece(Bot):
 
     def _release_inputs(self) -> None:
         self._release_jump()
+        self._cancel_script()
         assert self.controller is not None
         self.controller.release_button(melee.enums.Button.BUTTON_A)
