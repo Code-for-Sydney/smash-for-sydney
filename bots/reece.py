@@ -105,18 +105,17 @@ class ReeceBot(Bot):
         if self._attack_cooldown_remaining > 0:
             return "moving_to_opponent"
 
-        stage_center = (stage_geometry.left_edge + stage_geometry.right_edge) / 2.0
         if self._state == "retreating" and not self._should_stop_retreat(me, stage_geometry):
             return "retreating"
 
-        if self._should_attack(me, target, stage_geometry.left_edge, stage_geometry.right_edge):
-            return "attacking"
-
-        if self._should_recover(me, stage_geometry.left_edge, stage_geometry.right_edge, stage_geometry.floor_y):
+        if self._should_recover(me, stage_geometry):
             return "jumping_to_stage"
 
-        if self._should_retreat(me, stage_geometry.left_edge, stage_geometry.right_edge, stage_center):
+        if self._should_retreat(me, stage_geometry):
             return "retreating"
+
+        if self._should_attack(me, target, stage_geometry):
+            return "attacking"
 
         return "moving_to_opponent"
 
@@ -130,7 +129,7 @@ class ReeceBot(Bot):
         else:
             self._move_toward_target(me, target, stage_geometry)
 
-    def _should_attack(self, me: PlayerState, target: PlayerState, left_edge: Float, right_edge: Float):
+    def _should_attack(self, me: PlayerState, target: PlayerState, stage_geometry: StageGeometry):
         if not getattr(me, "on_ground", False):
             return False
 
@@ -141,20 +140,20 @@ class ReeceBot(Bot):
         vertical_distance = abs(target.position.y - me.position.y)
         return horizontal_distance <= ATTACK_DISTANCE and vertical_distance <= ATTACK_DISTANCE
 
-    def _should_recover(self, me: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float):
+    def _should_recover(self, me: PlayerState, stage_geometry: StageGeometry):
         if getattr(me, "on_ground", False):
             return False
 
-        return me.position.x < left_edge - RECOVER_EDGE_MARGIN or me.position.x > right_edge + RECOVER_EDGE_MARGIN
+        return me.position.x < stage_geometry.left_edge - RECOVER_EDGE_MARGIN or me.position.x > stage_geometry.right_edge + RECOVER_EDGE_MARGIN
 
-    def _should_retreat(self, me: PlayerState, left_edge: Float, right_edge: Float, stage_center: Float):
+    def _should_retreat(self, me: PlayerState, stage_geometry: StageGeometry):
         if not getattr(me, "on_ground", False):
             return False
 
         if self._is_hitstun_or_airborne(me):
             return False
 
-        return me.position.x < left_edge + RETREAT_EDGE_MARGIN or me.position.x > right_edge - RETREAT_EDGE_MARGIN
+        return me.position.x < stage_geometry.left_edge + RETREAT_EDGE_MARGIN or me.position.x > stage_geometry.right_edge - RETREAT_EDGE_MARGIN
 
     def _nearest_opponent(self, gamestate: GameState, me: PlayerState) -> PlayerState | None:
         opponents = list[tuple[Float, PlayerState]]()
