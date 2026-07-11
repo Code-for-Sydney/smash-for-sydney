@@ -55,7 +55,9 @@ class LinyuPikachu(Bot):
         if not opponents:
             return None
 
-        me = gamestate.players[self.port]
+        me = gamestate.players.get(self.port)
+        if not me:
+            return None
         return min(
             opponents,
             key=lambda player: abs(player.position.x - me.position.x),
