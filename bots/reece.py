@@ -9,6 +9,7 @@ from .bot import Bot
 
 
 # Ideas:
+# - Should not follow opponent past a certain distance from the centre of the stage.
 # - On ledge, pick randomly between get up, jump, and roll
 # - Detect if opponent is standing still and do a more precise action (e.g. attack up or jump and attack).
 # - Weighted average for opponent position to make it smoother
@@ -20,12 +21,14 @@ from .bot import Bot
 
 
 JUMP_HOLD_FRAMES = 10
-ATTACK_DISTANCE = 25.0
-DOWN_SMASH_DISTANCE = 15.0
+ATTACK_DISTANCE = 20.0
+DOWN_SMASH_DISTANCE = 10.0
 RETREAT_EDGE_MARGIN = 40.0
 RECOVER_EDGE_MARGIN = 0
 CENTRE_STAGE_FRACTION = 0.2
 ATTACK_COOLDOWN_FRAMES = 20
+MOVE_DISTANCE_THRESHOLD = 1.0
+MOVE_INTERP_THRESHOLD = 5.0
 
 ATTACK_SCRIPT_TEMPLATE = (
     ("neutral",),
@@ -337,12 +340,22 @@ class ReeceBot(Bot):
 
     def _move_horizontally(self, me_x: Float, target_x: Float):
         assert self.controller is not None
-        if target_x < me_x:
-            self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.0, 0.5)
-        elif target_x > me_x:
-            self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 1.0, 0.5)
-        else:
+        diff = float(target_x - me_x)
+        abs_diff = abs(diff)
+        if abs_diff < MOVE_DISTANCE_THRESHOLD:
+            # Too near to move, avoid jitter
             self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.5, 0.5)
+        if abs_diff < MOVE_INTERP_THRESHOLD:
+            # Move proportionally to the distance to the target
+            tilt_scale = (abs_diff / MOVE_INTERP_THRESHOLD)
+        else:
+            tilt_scale = 1.0
+        if diff > 0:
+            # Run right
+            self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.5 + 0.49 * tilt_scale, 0.5)
+        else:
+            # Run left
+            self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.5 - 0.49 * tilt_scale, 0.5)
 
     def _update_jump_hold(self) -> None:
         if self._jump_requested and self._jump_hold_elapsed < JUMP_HOLD_FRAMES:
