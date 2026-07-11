@@ -26,7 +26,7 @@ from .actions import ACTIONS, AGENT_CHARACTER, apply_action, get_observation
 
 class RLBot(Bot):
 
-    def __init__(self, character=None, checkpoint_path="model_final.zip"):
+    def __init__(self, character=None, checkpoint_path="C:/Users/sibun/Documents/dev/smash-for-sydney/bots/finn/model_final.zip"):
         super().__init__(AGENT_CHARACTER)
 
         # Imported lazily so this file doesn't hard-require stable-baselines3

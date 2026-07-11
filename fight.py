@@ -17,7 +17,7 @@ def fight(stage, players):
         logging.error("SMASH_ISO_PATH env var not defined")
         raise RuntimeError
 
-    console = melee.Console(path=slippi_path, fullscreen=True)
+    console = melee.Console(path=slippi_path, fullscreen=False)
 
     port = 1
     for player in players:
