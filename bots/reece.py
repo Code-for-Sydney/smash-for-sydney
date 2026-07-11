@@ -1,9 +1,14 @@
 import melee
+from melee import GameState
 
 from .bot import Bot
 
 
 JUMP_HOLD_FRAMES = 10
+ATTACK_DISTANCE = 8.0
+EDGE_MARGIN = 8.0
+ATTACK_DURATION_FRAMES = 3
+ATTACK_COOLDOWN_FRAMES = 12
 
 
 class Reece(Bot):
@@ -12,12 +17,16 @@ class Reece(Bot):
         super().__init__(character)
         self._jump_requested = False
         self._jump_hold_elapsed = 0
+        self._state = "moving_to_opponent"
+        self._attack_frames_remaining = 0
+        self._attack_cooldown_remaining = 0
 
-    def fight(self, gamestate):
+    def fight(self, gamestate: GameState) -> None:
         if self.controller is None:
             return
 
         self._update_jump_hold()
+        self._update_attack_timers()
 
         me = gamestate.players.get(self.port)
         if me is None or me.position is None:
@@ -25,13 +34,54 @@ class Reece(Bot):
 
         target = self._nearest_opponent(gamestate, me)
         if target is None:
+            self._state = "idle"
             self._release_inputs()
             return
 
         left_edge, right_edge, floor_y, stage_center = self._get_stage_geometry(gamestate)
-        self._move_toward_target(me, target, left_edge, right_edge, floor_y, stage_center)
+        self._state = self._choose_state(me, target, left_edge, right_edge, floor_y)
+        self._run_state(me, target, left_edge, right_edge, floor_y, stage_center)
 
-    def _nearest_opponent(self, gamestate, me):
+    def _choose_state(self, me, target, left_edge, right_edge, floor_y):
+        if self._attack_frames_remaining > 0:
+            return "attacking"
+
+        if self._attack_cooldown_remaining > 0:
+            return "moving_to_opponent"
+
+        if self._should_attack(me, target, left_edge, right_edge):
+            return "attacking"
+
+        if self._should_recover(me, left_edge, right_edge, floor_y):
+            return "jumping_to_stage"
+
+        return "moving_to_opponent"
+
+    def _run_state(self, me, target, left_edge, right_edge, floor_y, stage_center):
+        if self._state == "attacking":
+            self._perform_smash_attack(me, target)
+        elif self._state == "jumping_to_stage":
+            self._recover_to_stage(me, left_edge, right_edge, floor_y, stage_center)
+        else:
+            self._move_toward_target(me, target, left_edge, right_edge, floor_y, stage_center)
+
+    def _should_attack(self, me, target, left_edge, right_edge):
+        if not getattr(me, "on_ground", False):
+            return False
+
+        if not (left_edge + EDGE_MARGIN <= me.position.x <= right_edge - EDGE_MARGIN):
+            return False
+
+        horizontal_distance = abs(target.position.x - me.position.x)
+        return horizontal_distance <= ATTACK_DISTANCE
+
+    def _should_recover(self, me, left_edge, right_edge, floor_y):
+        if getattr(me, "on_ground", False):
+            return False
+
+        return me.position.x < left_edge - EDGE_MARGIN or me.position.x > right_edge + EDGE_MARGIN
+
+    def _nearest_opponent(self, gamestate: GameState, me):
         opponents = []
         for port, player in gamestate.players.items():
             if port == self.port or player.position is None:
@@ -48,7 +98,7 @@ class Reece(Bot):
         opponents.sort(key=lambda item: item[0])
         return opponents[0][1]
 
-    def _get_stage_geometry(self, gamestate):
+    def _get_stage_geometry(self, gamestate: GameState):
         left_edge = self._get_numeric_value(gamestate, ["stage_left", "left", "left_bound", "left_boundary", "x_left"])
         right_edge = self._get_numeric_value(gamestate, ["stage_right", "right", "right_bound", "right_boundary", "x_right"])
         floor_y = self._get_numeric_value(gamestate, ["stage_bottom", "bottom", "floor", "y_bottom", "bottom_y"])
@@ -98,6 +148,38 @@ class Reece(Bot):
         self._move_horizontally(me_x, edge_x)
         self._request_jump()
 
+    def _recover_to_stage(self, me, left_edge, right_edge, floor_y, stage_center):
+        me_x = me.position.x
+        me_y = me.position.y
+
+        if me_y > floor_y:
+            self._move_horizontally(me_x, stage_center)
+            self._request_jump()
+            return
+
+        edge_x = right_edge if me_x >= stage_center else left_edge
+        self._move_horizontally(me_x, edge_x)
+        self._request_jump()
+
+    def _perform_smash_attack(self, me, target):
+        self._release_jump()
+
+        if target.position.x < me.position.x:
+            self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.0, 0.5)
+        else:
+            self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 1.0, 0.5)
+
+        if self._attack_frames_remaining <= 0:
+            self._attack_frames_remaining = ATTACK_DURATION_FRAMES
+            self.controller.press_button(melee.enums.Button.BUTTON_A)
+        else:
+            self._attack_frames_remaining -= 1
+
+        if self._attack_frames_remaining <= 0:
+            self.controller.release_button(melee.enums.Button.BUTTON_A)
+            self._attack_frames_remaining = 0
+            self._attack_cooldown_remaining = ATTACK_COOLDOWN_FRAMES
+
     def _move_horizontally(self, me_x, target_x):
         if target_x < me_x:
             self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.0, 0.5)
@@ -116,6 +198,10 @@ class Reece(Bot):
             self._jump_requested = False
             self._jump_hold_elapsed = 0
 
+    def _update_attack_timers(self) -> None:
+        if self._attack_cooldown_remaining > 0:
+            self._attack_cooldown_remaining -= 1
+
     def _request_jump(self) -> None:
         if not self._jump_requested:
             self.controller.press_button(melee.enums.Button.BUTTON_A)
@@ -130,3 +216,4 @@ class Reece(Bot):
 
     def _release_inputs(self) -> None:
         self._release_jump()
+        self.controller.release_button(melee.enums.Button.BUTTON_A)

@@ -1,4 +1,6 @@
 import melee
+from melee import GameState
+
 import logging
 
 class Bot(object):
@@ -24,5 +26,5 @@ class Bot(object):
         else:
             logging.info(f"Connected controller {self.port}")
 
-    def fight(self, gamestate):    
+    def fight(self, gamestate: GameState):    
        pass
