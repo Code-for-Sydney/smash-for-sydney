@@ -10,6 +10,7 @@ from .bot import Bot
 
 JUMP_HOLD_FRAMES = 10
 ATTACK_DISTANCE = 8.0
+DOWN_SMASH_DISTANCE = 4.0
 EDGE_MARGIN = 8.0
 ATTACK_DURATION_FRAMES = 3
 ATTACK_COOLDOWN_FRAMES = 12
@@ -80,7 +81,8 @@ class Reece(Bot):
             return False
 
         horizontal_distance = abs(target.position.x - me.position.x)
-        return horizontal_distance <= ATTACK_DISTANCE
+        vertical_distance = abs(target.position.y - me.position.y)
+        return horizontal_distance <= ATTACK_DISTANCE and vertical_distance <= ATTACK_DISTANCE
 
     def _should_recover(self, me: PlayerState, left_edge: Float, right_edge: Float, floor_y: Float):
         if getattr(me, "on_ground", False):
@@ -173,7 +175,12 @@ class Reece(Bot):
 
         assert self.controller is not None
 
-        if target.position.x < me.position.x:
+        horizontal_distance = abs(target.position.x - me.position.x)
+        vertical_distance = abs(target.position.y - me.position.y)
+
+        if horizontal_distance <= DOWN_SMASH_DISTANCE and vertical_distance <= DOWN_SMASH_DISTANCE:
+            self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.5, 0.0)
+        elif target.position.x < me.position.x:
             self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 0.0, 0.5)
         else:
             self.controller.tilt_analog(melee.enums.Button.BUTTON_MAIN, 1.0, 0.5)
