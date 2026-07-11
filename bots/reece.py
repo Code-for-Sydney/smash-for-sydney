@@ -17,9 +17,9 @@ from .bot import Bot
 
 
 JUMP_HOLD_FRAMES = 10
-ATTACK_DISTANCE = 20.0
-DOWN_SMASH_DISTANCE = 10.0
-EDGE_MARGIN = 20.0
+ATTACK_DISTANCE = 25.0
+DOWN_SMASH_DISTANCE = 15.0
+EDGE_MARGIN = 40.0
 ATTACK_COOLDOWN_FRAMES = 20
 
 ATTACK_SCRIPT_TEMPLATE = (
@@ -79,13 +79,17 @@ class Reece(Bot):
         if self._attack_cooldown_remaining > 0:
             return "moving_to_opponent"
 
+        stage_center = (left_edge + right_edge) / 2.0
+        if self._state == "retreating" and not self._should_stop_retreat(me, left_edge, right_edge, stage_center):
+            return "retreating"
+
         if self._should_attack(me, target, left_edge, right_edge):
             return "attacking"
 
         if self._should_recover(me, left_edge, right_edge, floor_y):
             return "jumping_to_stage"
 
-        if self._should_retreat(me, left_edge, right_edge):
+        if self._should_retreat(me, left_edge, right_edge, stage_center):
             return "retreating"
 
         return "moving_to_opponent"
@@ -117,8 +121,11 @@ class Reece(Bot):
 
         return me.position.x < left_edge - EDGE_MARGIN or me.position.x > right_edge + EDGE_MARGIN
 
-    def _should_retreat(self, me: PlayerState, left_edge: Float, right_edge: Float):
+    def _should_retreat(self, me: PlayerState, left_edge: Float, right_edge: Float, stage_center: Float):
         if not getattr(me, "on_ground", False):
+            return False
+
+        if self._is_hitstun_or_airborne(me):
             return False
 
         return me.position.x < left_edge + EDGE_MARGIN or me.position.x > right_edge - EDGE_MARGIN
@@ -204,9 +211,33 @@ class Reece(Bot):
         self._request_jump()
 
     def _retreat_to_center(self, me: PlayerState, left_edge: Float, right_edge: Float, stage_center: Float):
+        if self._should_stop_retreat(me, left_edge, right_edge, stage_center):
+            self._release_jump()
+            return
+
         me_x = me.position.x
         self._move_horizontally(me_x, stage_center)
         self._release_jump()
+
+    def _should_stop_retreat(self, me: PlayerState, left_edge: Float, right_edge: Float, stage_center: Float) -> bool:
+        if not getattr(me, "on_ground", False):
+            return True
+
+        if self._is_hitstun_or_airborne(me):
+            return True
+
+        center_margin = max(EDGE_MARGIN, abs(right_edge - left_edge) * 0.1)
+        return abs(me.position.x - stage_center) <= center_margin
+
+    def _is_hitstun_or_airborne(self, me: PlayerState) -> bool:
+        if not getattr(me, "on_ground", False):
+            return True
+
+        hitstun = getattr(me, "hitstun_frames", None)
+        if hitstun is not None:
+            return int(hitstun) > 0
+
+        return False
 
     def _perform_smash_attack(self, me: PlayerState, target: PlayerState):
         self._release_jump()
