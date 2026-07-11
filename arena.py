@@ -4,6 +4,7 @@ from fight import fight
 from bots.example import Example
 from bots.masher import Masher
 from bots.aniket import AniketBot
+from bots.smashbot import SmashBot
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
