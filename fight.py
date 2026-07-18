@@ -75,4 +75,5 @@ def fight(stage, players):
                 print("ROUND", game_rounds)
                 game_rounds -= 1
                 if game_rounds < 0:
+                    console.stop()
                     exit()
